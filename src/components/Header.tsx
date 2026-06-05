@@ -11,7 +11,7 @@ export function Header() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
         <div className="flex items-center gap-3">
           <img
-            src="/wc2026-logo.webp"
+            src={`${import.meta.env.BASE_URL}wc2026-logo.webp`}
             alt="FIFA World Cup 2026"
             className="h-10 w-10 shrink-0 object-contain sm:h-11 sm:w-11"
           />
