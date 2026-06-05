@@ -79,6 +79,8 @@ const uiStrings = {
     darkMode: 'Dark mode',
     english: 'English',
     chinese: '中文',
+    backToSchedule: 'Back to schedule',
+    teamMatches: 'Matches',
   },
   zh: {
     title: '2026 国际足联世界杯',
@@ -107,6 +109,8 @@ const uiStrings = {
     darkMode: '深色模式',
     english: 'English',
     chinese: '中文',
+    backToSchedule: '返回赛程',
+    teamMatches: '比赛',
   },
 } as const;
 

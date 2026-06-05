@@ -1,43 +1,68 @@
 import { useLanguage } from '../context/LanguageContext';
 import { t, translateMatchType } from '../i18n/translations';
-import type { Match } from '../types';
+import type { Match, SelectedTeam } from '../types';
 
 interface MatchCardProps {
   match: Match;
+  onTeamSelect?: (team: SelectedTeam) => void;
 }
 
 function TeamRow({
   flag,
   name,
+  teamId,
   score,
   showScore,
   finished,
+  onTeamSelect,
 }: {
   flag?: string;
   name: string;
+  teamId?: string;
   score: number;
   showScore: boolean;
   finished: boolean;
+  onTeamSelect?: (team: SelectedTeam) => void;
 }) {
+  const isClickable = Boolean(teamId && onTeamSelect);
+
+  const content = (
+    <>
+      {flag ? (
+        <img
+          src={flag}
+          alt=""
+          className="h-6 w-8 shrink-0 rounded-sm object-cover shadow-sm"
+          loading="lazy"
+        />
+      ) : (
+        <div className="flex h-6 w-8 shrink-0 items-center justify-center rounded-sm bg-slate-200 text-[10px] font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-400">
+          ?
+        </div>
+      )}
+      <span
+        className={`min-w-0 flex-1 text-sm font-medium text-slate-800 dark:text-slate-100 ${
+          isClickable ? 'group-hover:text-wc-green group-hover:underline' : ''
+        }`}
+      >
+        {name}
+      </span>
+    </>
+  );
+
   return (
     <div className="flex items-center gap-3">
-      <div className="flex min-w-0 flex-1 items-center gap-2.5">
-        {flag ? (
-          <img
-            src={flag}
-            alt=""
-            className="h-6 w-8 shrink-0 rounded-sm object-cover shadow-sm"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-6 w-8 shrink-0 items-center justify-center rounded-sm bg-slate-200 text-[10px] font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-400">
-            ?
-          </div>
-        )}
-        <span className="min-w-0 flex-1 text-sm font-medium text-slate-800 dark:text-slate-100">
-          {name}
-        </span>
-      </div>
+      {isClickable ? (
+        <button
+          type="button"
+          onClick={() => onTeamSelect!({ id: teamId!, name, flag })}
+          className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-md text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
+        >
+          {content}
+        </button>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">{content}</div>
+      )}
       {showScore && (
         <span
           className={`shrink-0 text-xl font-bold tabular-nums ${
@@ -78,7 +103,7 @@ function StatusBadge({ match }: { match: Match }) {
   );
 }
 
-export function MatchCard({ match }: MatchCardProps) {
+export function MatchCard({ match, onTeamSelect }: MatchCardProps) {
   const { language } = useLanguage();
   const showScore = match.finished || match.live;
 
@@ -99,16 +124,20 @@ export function MatchCard({ match }: MatchCardProps) {
         <TeamRow
           flag={match.homeFlag}
           name={match.homeTeam}
+          teamId={match.homeTeamId}
           score={match.homeScore}
           showScore={showScore}
           finished={match.finished}
+          onTeamSelect={onTeamSelect}
         />
         <TeamRow
           flag={match.awayFlag}
           name={match.awayTeam}
+          teamId={match.awayTeamId}
           score={match.awayScore}
           showScore={showScore}
           finished={match.finished}
+          onTeamSelect={onTeamSelect}
         />
       </div>
 

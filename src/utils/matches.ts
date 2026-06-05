@@ -55,10 +55,15 @@ export function transformGame(
   const timeZone = getStadiumTimeZone(game.stadium_id);
   const kickoff = stadiumLocalToDate(game.local_date, timeZone);
 
+  const homeTeamId = game.home_team_id && game.home_team_id !== '0' ? game.home_team_id : undefined;
+  const awayTeamId = game.away_team_id && game.away_team_id !== '0' ? game.away_team_id : undefined;
+
   return {
     id: game.id,
     homeTeam: resolveTeamName(game, 'home', teamMap, lang),
     awayTeam: resolveTeamName(game, 'away', teamMap, lang),
+    homeTeamId,
+    awayTeamId,
     homeScore: Number(game.home_score) || 0,
     awayScore: Number(game.away_score) || 0,
     homeFlag: resolveFlag(game, 'home', teamMap),
@@ -73,6 +78,12 @@ export function transformGame(
     finished,
     live,
   };
+}
+
+export function filterMatchesByTeam(matches: Match[], teamId: string): Match[] {
+  return matches.filter(
+    (m) => m.homeTeamId === teamId || m.awayTeamId === teamId,
+  );
 }
 
 export function groupMatchesByDate(matches: Match[]): DateGroup[] {

@@ -1,18 +1,24 @@
+import { useCallback, useMemo, useState } from 'react';
 import { Header } from './components/Header';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { DesktopSchedule } from './components/DesktopSchedule';
 import { MobileSchedule } from './components/MobileSchedule';
+import { TeamMatchesView } from './components/TeamMatchesView';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { useIsDesktop } from './hooks/useMediaQuery';
 import { useMatches } from './hooks/useMatches';
 import { t } from './i18n/translations';
+import type { SelectedTeam } from './types';
+import { filterMatchesByTeam } from './utils/matches';
 
 function ScheduleContent() {
   const { language } = useLanguage();
   const isDesktop = useIsDesktop();
+  const [selectedTeam, setSelectedTeam] = useState<SelectedTeam | null>(null);
   const {
     dateGroups,
+    allMatches,
     dateKeys,
     activeDateKey,
     setActiveDateKey,
@@ -20,6 +26,15 @@ function ScheduleContent() {
     error,
     retry,
   } = useMatches(language);
+
+  const handleTeamSelect = useCallback((team: SelectedTeam) => {
+    setSelectedTeam(team);
+  }, []);
+
+  const teamMatches = useMemo(() => {
+    if (!selectedTeam) return [];
+    return filterMatchesByTeam(allMatches, selectedTeam.id);
+  }, [allMatches, selectedTeam]);
 
   if (loading) {
     return (
@@ -49,6 +64,20 @@ function ScheduleContent() {
     );
   }
 
+  if (selectedTeam) {
+    return (
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
+        <TeamMatchesView
+          team={selectedTeam}
+          matches={teamMatches}
+          columns={isDesktop ? 2 : 1}
+          onBack={() => setSelectedTeam(null)}
+          onTeamSelect={handleTeamSelect}
+        />
+      </main>
+    );
+  }
+
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
       {isDesktop ? (
@@ -57,11 +86,13 @@ function ScheduleContent() {
           dateKeys={dateKeys}
           activeDateKey={activeDateKey}
           onDateChange={setActiveDateKey}
+          onTeamSelect={handleTeamSelect}
         />
       ) : (
         <MobileSchedule
           dateGroups={dateGroups}
           initialDateKey={activeDateKey}
+          onTeamSelect={handleTeamSelect}
         />
       )}
     </main>

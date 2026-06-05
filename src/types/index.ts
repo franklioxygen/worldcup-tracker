@@ -52,10 +52,18 @@ export interface ApiStadium {
   region: string;
 }
 
+export interface SelectedTeam {
+  id: string;
+  name: string;
+  flag?: string;
+}
+
 export interface Match {
   id: string;
   homeTeam: string;
   awayTeam: string;
+  homeTeamId?: string;
+  awayTeamId?: string;
   homeScore: number;
   awayScore: number;
   homeFlag?: string;
