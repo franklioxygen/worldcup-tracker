@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { AddToCalendarModal } from './AddToCalendarModal';
 import { useLanguage } from '../context/LanguageContext';
 import { t, translateMatchType } from '../i18n/translations';
 import type { Match, SelectedTeam } from '../types';
@@ -71,7 +73,13 @@ function Score({ score, showScore }: { score: number; showScore: boolean }) {
   );
 }
 
-function StatusBadge({ match }: { match: Match }) {
+function StatusBadge({
+  match,
+  onTimeClick,
+}: {
+  match: Match;
+  onTimeClick?: () => void;
+}) {
   const { language } = useLanguage();
 
   if (match.live) {
@@ -92,17 +100,25 @@ function StatusBadge({ match }: { match: Match }) {
   }
 
   return (
-    <span className="rounded-full bg-wc-green/10 px-2 py-0.5 text-[10px] font-semibold text-wc-green">
+    <button
+      type="button"
+      onClick={onTimeClick}
+      className="rounded-full bg-wc-green/10 px-2 py-0.5 text-[10px] font-semibold text-wc-green transition-colors hover:bg-wc-green/20"
+      aria-label={t(language, 'addToCalendar')}
+    >
       {match.time}
-    </span>
+    </button>
   );
 }
 
 export function MatchCard({ match, onTeamSelect }: MatchCardProps) {
   const { language } = useLanguage();
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
   const showScore = match.finished || match.live;
+  const canAddToCalendar = !match.live && !match.finished;
 
   return (
+    <>
     <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md sm:p-6 dark:border-slate-700 dark:bg-slate-800/80">
       <div className="mb-4 flex items-center justify-between gap-3 sm:mb-5">
         <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
@@ -112,7 +128,10 @@ export function MatchCard({ match, onTeamSelect }: MatchCardProps) {
           <span>·</span>
           <span>{translateMatchType(match.type, language)}</span>
         </div>
-        <StatusBadge match={match} />
+        <StatusBadge
+          match={match}
+          onTimeClick={canAddToCalendar ? () => setShowCalendarModal(true) : undefined}
+        />
       </div>
 
       <div
@@ -157,5 +176,10 @@ export function MatchCard({ match, onTeamSelect }: MatchCardProps) {
         </p>
       </div>
     </article>
+
+    {showCalendarModal && (
+      <AddToCalendarModal match={match} onClose={() => setShowCalendarModal(false)} />
+    )}
+    </>
   );
 }
