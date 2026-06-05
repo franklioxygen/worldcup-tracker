@@ -5,9 +5,9 @@ import { DesktopSchedule } from './components/DesktopSchedule';
 import { MobileSchedule } from './components/MobileSchedule';
 import { TeamMatchesView } from './components/TeamMatchesView';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { MatchesProvider, useMatchesContext } from './context/MatchesContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { useIsDesktop } from './hooks/useMediaQuery';
-import { useMatches } from './hooks/useMatches';
 import { t } from './i18n/translations';
 import type { SelectedTeam } from './types';
 import { filterMatchesByTeam } from './utils/matches';
@@ -25,7 +25,7 @@ function ScheduleContent() {
     loading,
     error,
     retry,
-  } = useMatches(language);
+  } = useMatchesContext();
 
   const handleTeamSelect = useCallback((team: SelectedTeam) => {
     setSelectedTeam(team);
@@ -103,10 +103,12 @@ export default function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-          <Header />
-          <ScheduleContent />
-        </div>
+        <MatchesProvider>
+          <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+            <Header />
+            <ScheduleContent />
+          </div>
+        </MatchesProvider>
       </LanguageProvider>
     </ThemeProvider>
   );

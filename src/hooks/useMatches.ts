@@ -21,8 +21,10 @@ interface UseMatchesResult {
   activeDateKey: string;
   setActiveDateKey: (key: string) => void;
   loading: boolean;
+  refreshing: boolean;
   error: string | null;
   retry: () => void;
+  refresh: () => void;
 }
 
 function applyCache(
@@ -41,10 +43,12 @@ export function useMatches(language: Language): UseMatchesResult {
   const [teams, setTeams] = useState<ApiTeam[]>([]);
   const [stadiums, setStadiums] = useState<ApiStadium[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeDateKey, setActiveDateKey] = useState('');
   const [initialized, setInitialized] = useState(false);
   const syncingRef = useRef(false);
+  const refreshingRef = useRef(false);
 
   const load = useCallback(async (force = false) => {
     setError(null);
@@ -86,12 +90,35 @@ export function useMatches(language: Language): UseMatchesResult {
     load();
   }, [load]);
 
+  const refresh = useCallback(async () => {
+    if (refreshingRef.current) return;
+
+    refreshingRef.current = true;
+    setError(null);
+    setRefreshing(true);
+
+    const cached = loadCache();
+
+    try {
+      const cache = await fetchAndBuildCache();
+      applyCache(cache, setGames, setTeams, setStadiums);
+    } catch {
+      if (cached) {
+        applyCache(cached, setGames, setTeams, setStadiums);
+      } else if (games.length === 0) {
+        setError('fetch_failed');
+      }
+    } finally {
+      refreshingRef.current = false;
+      setRefreshing(false);
+    }
+  }, [games.length]);
+
   const allMatches = useMemo(() => {
     if (games.length === 0) return [];
 
     const teamMap = buildTeamMap(teams);
     const stadiumMap = buildStadiumMap(stadiums);
-
     return games
       .map((game) => transformGame(game, teamMap, stadiumMap, language))
       .sort((a, b) => {
@@ -117,7 +144,9 @@ export function useMatches(language: Language): UseMatchesResult {
     activeDateKey,
     setActiveDateKey,
     loading,
+    refreshing,
     error,
     retry: () => load(true),
+    refresh,
   };
 }

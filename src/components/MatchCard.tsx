@@ -7,72 +7,67 @@ interface MatchCardProps {
   onTeamSelect?: (team: SelectedTeam) => void;
 }
 
-function TeamRow({
-  flag,
+function Flag({ flag }: { flag?: string }) {
+  if (flag) {
+    return (
+      <img
+        src={flag}
+        alt=""
+        className="h-6 w-8 shrink-0 rounded-sm object-cover shadow-sm"
+        loading="lazy"
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-6 w-8 shrink-0 items-center justify-center rounded-sm bg-slate-200 text-[10px] font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-400">
+      ?
+    </div>
+  );
+}
+
+function TeamName({
   name,
   teamId,
-  score,
-  showScore,
-  finished,
+  flag,
+  align = 'left',
   onTeamSelect,
 }: {
-  flag?: string;
   name: string;
   teamId?: string;
-  score: number;
-  showScore: boolean;
-  finished: boolean;
+  flag?: string;
+  align?: 'left' | 'right';
   onTeamSelect?: (team: SelectedTeam) => void;
 }) {
   const isClickable = Boolean(teamId && onTeamSelect);
+  const alignClass = align === 'right' ? 'text-right' : 'text-left';
 
-  const content = (
-    <>
-      {flag ? (
-        <img
-          src={flag}
-          alt=""
-          className="h-6 w-8 shrink-0 rounded-sm object-cover shadow-sm"
-          loading="lazy"
-        />
-      ) : (
-        <div className="flex h-6 w-8 shrink-0 items-center justify-center rounded-sm bg-slate-200 text-[10px] font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-400">
-          ?
-        </div>
-      )}
-      <span
-        className={`min-w-0 flex-1 text-sm font-medium text-slate-800 dark:text-slate-100 ${
-          isClickable ? 'group-hover:text-wc-green group-hover:underline' : ''
-        }`}
+  if (isClickable) {
+    return (
+      <button
+        type="button"
+        onClick={() => onTeamSelect!({ id: teamId!, name, flag })}
+        className={`group min-w-0 break-words text-sm font-medium leading-snug text-balance text-slate-800 transition-colors hover:text-wc-green hover:underline dark:text-slate-100 ${alignClass}`}
       >
         {name}
-      </span>
-    </>
-  );
+      </button>
+    );
+  }
 
   return (
-    <div className="flex items-center gap-3">
-      {isClickable ? (
-        <button
-          type="button"
-          onClick={() => onTeamSelect!({ id: teamId!, name, flag })}
-          className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-md text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/50"
-        >
-          {content}
-        </button>
-      ) : (
-        <div className="flex min-w-0 flex-1 items-center gap-2.5">{content}</div>
-      )}
-      {showScore && (
-        <span
-          className={`shrink-0 text-xl font-bold tabular-nums ${
-            finished ? 'text-slate-900 dark:text-white' : 'text-red-500'
-          }`}
-        >
-          {score}
-        </span>
-      )}
-    </div>
+    <span className={`min-w-0 break-words text-sm font-medium leading-snug text-balance text-slate-800 dark:text-slate-100 ${alignClass}`}>
+      {name}
+    </span>
+  );
+}
+
+function Score({ score, showScore }: { score: number; showScore: boolean }) {
+  if (!showScore) return null;
+
+  return (
+    <span className="shrink-0 text-xl font-bold tabular-nums text-slate-900 dark:text-white">
+      {score}
+    </span>
   );
 }
 
@@ -108,8 +103,8 @@ export function MatchCard({ match, onTeamSelect }: MatchCardProps) {
   const showScore = match.finished || match.live;
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-800/80">
-      <div className="mb-3 flex items-center justify-between gap-2">
+    <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md sm:p-6 dark:border-slate-700 dark:bg-slate-800/80">
+      <div className="mb-4 flex items-center justify-between gap-3 sm:mb-5">
         <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           <span className="font-semibold text-wc-green">
             {match.group.length <= 2 ? `${t(language, 'group')} ${match.group}` : match.group}
@@ -120,40 +115,42 @@ export function MatchCard({ match, onTeamSelect }: MatchCardProps) {
         <StatusBadge match={match} />
       </div>
 
-      <div className="space-y-3">
-        <TeamRow
-          flag={match.homeFlag}
+      <div
+        className={`grid items-center gap-x-2 py-3 sm:gap-x-3 sm:py-4 ${
+          showScore
+            ? 'grid-cols-[auto_minmax(0,1fr)_auto_auto_auto_minmax(0,1fr)_auto]'
+            : 'grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto]'
+        }`}
+      >
+        <Flag flag={match.homeFlag} />
+        <TeamName
           name={match.homeTeam}
           teamId={match.homeTeamId}
-          score={match.homeScore}
-          showScore={showScore}
-          finished={match.finished}
+          flag={match.homeFlag}
           onTeamSelect={onTeamSelect}
         />
-        <TeamRow
-          flag={match.awayFlag}
+        {showScore && (
+          <Score score={match.homeScore} showScore={showScore} />
+        )}
+
+        <span className="px-0.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+          vs
+        </span>
+
+        {showScore && (
+          <Score score={match.awayScore} showScore={showScore} />
+        )}
+        <TeamName
           name={match.awayTeam}
           teamId={match.awayTeamId}
-          score={match.awayScore}
-          showScore={showScore}
-          finished={match.finished}
+          flag={match.awayFlag}
+          align="right"
           onTeamSelect={onTeamSelect}
         />
+        <Flag flag={match.awayFlag} />
       </div>
 
-      {!showScore && (
-        <p className="mt-3 text-center text-lg font-semibold text-slate-400 dark:text-slate-500">
-          vs
-        </p>
-      )}
-
-      {showScore && (
-        <p className="mt-2 text-center text-xs font-medium text-slate-400 dark:text-slate-500">
-          {match.homeScore} – {match.awayScore}
-        </p>
-      )}
-
-      <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-700">
+      <div className="mt-3 border-t border-slate-100 pt-2.5 dark:border-slate-700">
         <p className="truncate text-xs text-slate-500 dark:text-slate-400">
           {match.stadium}
           {match.city && ` · ${match.city}`}

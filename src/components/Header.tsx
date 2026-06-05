@@ -2,6 +2,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { t } from '../i18n/translations';
 import { LanguageToggle } from './LanguageToggle';
 import { ThemeToggle } from './ThemeToggle';
+import { UpdateButton } from './UpdateButton';
 
 export function Header() {
   const { language } = useLanguage();
@@ -25,6 +26,7 @@ export function Header() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <UpdateButton />
           <LanguageToggle />
           <ThemeToggle />
         </div>
