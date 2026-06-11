@@ -88,12 +88,10 @@ export function shouldSyncFromApi(cache: WcCache): boolean {
 
   if (!isSyncedToday(cache.lastSyncedAt)) return true;
 
-  if (
-    isDateFullyFinished(todayGames) &&
-    !cache.syncedDateKeys.includes(todayKey)
-  ) {
-    return true;
-  }
+  // Keep syncing on match days while any game today is still in progress
+  if (!isDateFullyFinished(todayGames)) return true;
+
+  if (!cache.syncedDateKeys.includes(todayKey)) return true;
 
   return false;
 }

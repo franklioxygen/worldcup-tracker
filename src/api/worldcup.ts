@@ -6,12 +6,15 @@ const GITHUB_RAW =
 const JSDELIVR_CDN =
   'https://cdn.jsdelivr.net/gh/rezarahiminia/worldcup2026@main';
 
+const LIVE_DATA_BASE =
+  'https://raw.githubusercontent.com/franklioxygen/worldcup-tracker/live-data';
+
 const LIVE_API = import.meta.env.DEV ? '/api' : 'https://worldcup26.ir';
 
-const FETCH_TIMEOUT_MS = 3000;
+const FETCH_TIMEOUT_MS = 8000;
 
 async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(url, { signal });
+  const response = await fetch(url, { signal, cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`Fetch error: ${response.status}`);
   }
@@ -31,7 +34,11 @@ async function tryFetchJson<T>(url: string): Promise<T | null> {
 }
 
 async function fetchJsonFromSources<T>(filename: string): Promise<T> {
-  const sources = [`${GITHUB_RAW}/${filename}`, `${JSDELIVR_CDN}/${filename}`];
+  const bust = `t=${Date.now()}`;
+  const sources = [
+    `${GITHUB_RAW}/${filename}?${bust}`,
+    `${JSDELIVR_CDN}/${filename}?${bust}`,
+  ];
 
   for (const url of sources) {
     const data = await tryFetchJson<T>(url);
@@ -42,10 +49,17 @@ async function fetchJsonFromSources<T>(filename: string): Promise<T> {
 }
 
 async function fetchLive<T>(path: string): Promise<T | null> {
+  // worldcup26.ir blocks cross-origin browser requests (CORP: same-origin).
+  // Dev uses the Vite proxy; production uses the synced live-data branch.
+  if (!import.meta.env.DEV) return null;
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    const response = await fetch(`${LIVE_API}${path}`, { signal: controller.signal });
+    const response = await fetch(`${LIVE_API}${path}`, {
+      signal: controller.signal,
+      cache: 'no-store',
+    });
     clearTimeout(timeout);
     if (!response.ok) return null;
     return (await response.json()) as T;
@@ -54,7 +68,16 @@ async function fetchLive<T>(path: string): Promise<T | null> {
   }
 }
 
+/** Production: synced every 3 min by GitHub Actions (CORS-safe raw.githubusercontent.com). */
+async function fetchLiveData<T>(filename: string): Promise<T | null> {
+  if (import.meta.env.DEV) return null;
+  return tryFetchJson<T>(`${LIVE_DATA_BASE}/${filename}?t=${Date.now()}`);
+}
+
 export async function fetchGames(): Promise<ApiGame[]> {
+  const synced = await fetchLiveData<{ games: ApiGame[] }>('games.json');
+  if (synced?.games) return synced.games;
+
   const live = await fetchLive<{ games: ApiGame[] }>('/get/games');
   if (live?.games) return live.games;
 
@@ -62,6 +85,9 @@ export async function fetchGames(): Promise<ApiGame[]> {
 }
 
 export async function fetchTeams(): Promise<ApiTeam[]> {
+  const synced = await fetchLiveData<{ teams: ApiTeam[] }>('teams.json');
+  if (synced?.teams) return synced.teams;
+
   const live = await fetchLive<{ teams: ApiTeam[] }>('/get/teams');
   if (live?.teams) return live.teams;
 
@@ -69,6 +95,9 @@ export async function fetchTeams(): Promise<ApiTeam[]> {
 }
 
 export async function fetchStadiums(): Promise<ApiStadium[]> {
+  const synced = await fetchLiveData<{ stadiums: ApiStadium[] }>('stadiums.json');
+  if (synced?.stadiums) return synced.stadiums;
+
   const live = await fetchLive<{ stadiums: ApiStadium[] }>('/get/stadiums');
   if (live?.stadiums) return live.stadiums;
 

@@ -1,0 +1,34 @@
+name: Sync live scores
+
+on:
+  schedule:
+    - cron: '*/3 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch live data from worldcup26.ir
+        run: |
+          mkdir data
+          curl -sf "https://worldcup26.ir/get/games" -o data/games.json
+          curl -sf "https://worldcup26.ir/get/teams" -o data/teams.json
+          curl -sf "https://worldcup26.ir/get/stadiums" -o data/stadiums.json
+
+      - name: Push to live-data branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd data
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Sync live data $(date -u +%Y-%m-%dT%H:%M:%SZ)" || exit 0
+          git branch -M live-data
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          git push -f origin live-data
