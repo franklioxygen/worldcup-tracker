@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AddToCalendarModal } from './AddToCalendarModal';
 import { useLanguage } from '../context/LanguageContext';
 import { t, translateMatchType } from '../i18n/translations';
 import type { Match, SelectedTeam } from '../types';
+import { formatMatchElapsedTime } from '../utils/matchTime';
 
 interface MatchCardProps {
   match: Match;
@@ -81,12 +82,28 @@ function StatusBadge({
   onTimeClick?: () => void;
 }) {
   const { language } = useLanguage();
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    if (!match.live) return;
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, [match.live]);
 
   if (match.live) {
+    const elapsed = formatMatchElapsedTime(match.timeElapsed, language, match.kickoff, now);
+
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-        {t(language, 'live')}
+      <span className="inline-flex items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+          {t(language, 'live')}
+        </span>
+        {elapsed && (
+          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+            {elapsed}
+          </span>
+        )}
       </span>
     );
   }

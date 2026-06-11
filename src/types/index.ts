@@ -77,6 +77,7 @@ export interface Match {
   city: string;
   finished: boolean;
   live: boolean;
+  timeElapsed: string;
 }
 
 export interface DateGroup {

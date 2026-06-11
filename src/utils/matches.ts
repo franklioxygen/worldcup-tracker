@@ -77,6 +77,7 @@ export function transformGame(
     city: stadium?.city_en ?? '',
     finished,
     live,
+    timeElapsed: game.time_elapsed,
   };
 }
 
