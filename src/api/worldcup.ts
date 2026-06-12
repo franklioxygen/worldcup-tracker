@@ -11,7 +11,9 @@ const LIVE_DATA_BASE =
 
 const LIVE_API = import.meta.env.DEV ? '/api' : 'https://worldcup26.ir';
 
-const FETCH_TIMEOUT_MS = 8000;
+const FAST_FETCH_TIMEOUT_MS = 8000;
+/** worldcup26.ir often responds in 10–15s from browsers; 8s was aborting every live fetch. */
+const LIVE_FETCH_TIMEOUT_MS = 30_000;
 
 async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, { signal, cache: 'no-store' });
@@ -21,10 +23,10 @@ async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function tryFetchJson<T>(url: string): Promise<T | null> {
+async function tryFetchJson<T>(url: string, timeoutMs = FAST_FETCH_TIMEOUT_MS): Promise<T | null> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const data = await fetchJson<T>(url, controller.signal);
     clearTimeout(timeout);
     return data;
@@ -49,19 +51,7 @@ async function fetchJsonFromSources<T>(filename: string): Promise<T> {
 }
 
 async function fetchLive<T>(path: string): Promise<T | null> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    const response = await fetch(`${LIVE_API}${path}`, {
-      signal: controller.signal,
-      cache: 'no-store',
-    });
-    clearTimeout(timeout);
-    if (!response.ok) return null;
-    return (await response.json()) as T;
-  } catch {
-    return null;
-  }
+  return tryFetchJson<T>(`${LIVE_API}${path}`, LIVE_FETCH_TIMEOUT_MS);
 }
 
 /** Fallback when the live API is unavailable (synced by GitHub Actions). */
@@ -70,12 +60,51 @@ async function fetchLiveData<T>(filename: string): Promise<T | null> {
   return tryFetchJson<T>(`${LIVE_DATA_BASE}/${filename}?t=${Date.now()}`);
 }
 
-export async function fetchGames(): Promise<ApiGame[]> {
-  const live = await fetchLive<{ games: ApiGame[] }>('/get/games');
-  if (live?.games) return live.games;
+function gameFreshness(game: ApiGame): number {
+  const finished = game.finished.toUpperCase() === 'TRUE';
+  const elapsed = game.time_elapsed?.toLowerCase() ?? '';
 
-  const synced = await fetchLiveData<{ games: ApiGame[] }>('games.json');
-  if (synced?.games) return synced.games;
+  if (finished || elapsed === 'finished' || elapsed === 'ft') {
+    return 1_000 + (Number(game.home_score) || 0) + (Number(game.away_score) || 0);
+  }
+
+  if (elapsed !== 'notstarted' && elapsed !== 'null' && elapsed !== '') {
+    return 500 + (Number(game.home_score) || 0) + (Number(game.away_score) || 0);
+  }
+
+  return 0;
+}
+
+/** Prefer the copy with the most up-to-date score/status per match id. */
+export function mergeGames(...sources: ApiGame[][]): ApiGame[] {
+  const map = new Map<string, ApiGame>();
+
+  for (const games of sources) {
+    for (const game of games) {
+      const existing = map.get(game.id);
+      if (!existing || gameFreshness(game) >= gameFreshness(existing)) {
+        map.set(game.id, game);
+      }
+    }
+  }
+
+  return [...map.values()].sort((a, b) => Number(a.id) - Number(b.id));
+}
+
+export async function fetchGames(): Promise<ApiGame[]> {
+  const [live, synced, staticGames] = await Promise.all([
+    fetchLive<{ games: ApiGame[] }>('/get/games'),
+    fetchLiveData<{ games: ApiGame[] }>('games.json'),
+    tryFetchJson<ApiGame[]>(`${GITHUB_RAW}/football.matches.json?t=${Date.now()}`),
+  ]);
+
+  const merged = mergeGames(
+    staticGames ?? [],
+    synced?.games ?? [],
+    live?.games ?? [],
+  );
+
+  if (merged.length > 0) return merged;
 
   return fetchJsonFromSources<ApiGame[]>('football.matches.json');
 }

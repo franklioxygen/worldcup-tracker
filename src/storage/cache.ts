@@ -3,7 +3,7 @@ import type { ApiGame, ApiStadium, ApiTeam } from '../types';
 import { getDateKey, getTodayKey } from '../utils/dates';
 
 const CACHE_KEY = 'wc2026-data-cache';
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 
 export interface WcCache {
   version: number;
