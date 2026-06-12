@@ -24,7 +24,7 @@ interface UseMatchesResult {
   refreshing: boolean;
   error: string | null;
   retry: () => void;
-  refresh: () => void;
+  refresh: (options?: { silent?: boolean }) => void;
 }
 
 function applyCache(
@@ -90,12 +90,14 @@ export function useMatches(language: Language): UseMatchesResult {
     load();
   }, [load]);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (options?: { silent?: boolean }) => {
     if (refreshingRef.current) return;
 
     refreshingRef.current = true;
     setError(null);
-    setRefreshing(true);
+    if (!options?.silent) {
+      setRefreshing(true);
+    }
 
     const cached = loadCache();
 
@@ -110,7 +112,9 @@ export function useMatches(language: Language): UseMatchesResult {
       }
     } finally {
       refreshingRef.current = false;
-      setRefreshing(false);
+      if (!options?.silent) {
+        setRefreshing(false);
+      }
     }
   }, [games.length]);
 
@@ -136,6 +140,21 @@ export function useMatches(language: Language): UseMatchesResult {
       setInitialized(true);
     }
   }, [dateKeys, initialized]);
+
+  const hasLiveMatches = useMemo(
+    () => allMatches.some((match) => match.live),
+    [allMatches],
+  );
+
+  useEffect(() => {
+    if (!hasLiveMatches) return;
+
+    const id = setInterval(() => {
+      refresh({ silent: true });
+    }, 60_000);
+
+    return () => clearInterval(id);
+  }, [hasLiveMatches, refresh]);
 
   return {
     dateGroups,

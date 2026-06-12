@@ -36,4 +36,4 @@ Data comes from [rezarahiminia/worldcup2026](https://github.com/rezarahiminia/wo
 - `football.teams.json` — 48 teams with flags
 - `football.stadiums.json` — 16 venues
 
-In development, the app also tries the live API at `worldcup26.ir` (via Vite proxy) for real-time scores, falling back to GitHub JSON if unavailable.
+In development, the app uses a Vite proxy for `worldcup26.ir`. In production, it fetches live scores directly from the API, with the synced `live-data` branch and static JSON as fallbacks.

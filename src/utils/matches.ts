@@ -50,8 +50,9 @@ export function transformGame(
   lang: Language,
 ): Match {
   const stadium = stadiumMap.get(game.stadium_id);
-  const finished = game.finished.toUpperCase() === 'TRUE';
-  const live = !finished && game.time_elapsed !== 'notstarted' && game.time_elapsed !== 'null';
+  const elapsed = game.time_elapsed.toLowerCase();
+  const finished = game.finished.toUpperCase() === 'TRUE' || elapsed === 'finished' || elapsed === 'ft';
+  const live = !finished && elapsed !== 'notstarted' && elapsed !== 'null';
   const timeZone = getStadiumTimeZone(game.stadium_id);
   const kickoff = stadiumLocalToDate(game.local_date, timeZone);
 

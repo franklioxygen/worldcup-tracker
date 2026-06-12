@@ -49,10 +49,6 @@ async function fetchJsonFromSources<T>(filename: string): Promise<T> {
 }
 
 async function fetchLive<T>(path: string): Promise<T | null> {
-  // worldcup26.ir blocks cross-origin browser requests (CORP: same-origin).
-  // Dev uses the Vite proxy; production uses the synced live-data branch.
-  if (!import.meta.env.DEV) return null;
-
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -68,38 +64,38 @@ async function fetchLive<T>(path: string): Promise<T | null> {
   }
 }
 
-/** Production: synced every 3 min by GitHub Actions (CORS-safe raw.githubusercontent.com). */
+/** Fallback when the live API is unavailable (synced by GitHub Actions). */
 async function fetchLiveData<T>(filename: string): Promise<T | null> {
   if (import.meta.env.DEV) return null;
   return tryFetchJson<T>(`${LIVE_DATA_BASE}/${filename}?t=${Date.now()}`);
 }
 
 export async function fetchGames(): Promise<ApiGame[]> {
-  const synced = await fetchLiveData<{ games: ApiGame[] }>('games.json');
-  if (synced?.games) return synced.games;
-
   const live = await fetchLive<{ games: ApiGame[] }>('/get/games');
   if (live?.games) return live.games;
+
+  const synced = await fetchLiveData<{ games: ApiGame[] }>('games.json');
+  if (synced?.games) return synced.games;
 
   return fetchJsonFromSources<ApiGame[]>('football.matches.json');
 }
 
 export async function fetchTeams(): Promise<ApiTeam[]> {
-  const synced = await fetchLiveData<{ teams: ApiTeam[] }>('teams.json');
-  if (synced?.teams) return synced.teams;
-
   const live = await fetchLive<{ teams: ApiTeam[] }>('/get/teams');
   if (live?.teams) return live.teams;
+
+  const synced = await fetchLiveData<{ teams: ApiTeam[] }>('teams.json');
+  if (synced?.teams) return synced.teams;
 
   return fetchJsonFromSources<ApiTeam[]>('football.teams.json');
 }
 
 export async function fetchStadiums(): Promise<ApiStadium[]> {
-  const synced = await fetchLiveData<{ stadiums: ApiStadium[] }>('stadiums.json');
-  if (synced?.stadiums) return synced.stadiums;
-
   const live = await fetchLive<{ stadiums: ApiStadium[] }>('/get/stadiums');
   if (live?.stadiums) return live.stadiums;
+
+  const synced = await fetchLiveData<{ stadiums: ApiStadium[] }>('stadiums.json');
+  if (synced?.stadiums) return synced.stadiums;
 
   return fetchJsonFromSources<ApiStadium[]>('football.stadiums.json');
 }
