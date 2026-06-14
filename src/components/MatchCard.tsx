@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { AddToCalendarModal } from './AddToCalendarModal';
 import { useLanguage } from '../context/LanguageContext';
 import { t, translateMatchType } from '../i18n/translations';
-import type { Match, SelectedTeam } from '../types';
+import type { Match, SelectedStadium, SelectedTeam } from '../types';
 import { getFinishedBadgeKey } from '../utils/matchPhase';
 import { formatMatchElapsedTime } from '../utils/matchTime';
 
 interface MatchCardProps {
   match: Match;
   onTeamSelect?: (team: SelectedTeam) => void;
+  onStadiumSelect?: (stadium: SelectedStadium) => void;
 }
 
 function Flag({ flag }: { flag?: string }) {
@@ -148,11 +149,12 @@ function StatusBadge({
   );
 }
 
-export function MatchCard({ match, onTeamSelect }: MatchCardProps) {
+export function MatchCard({ match, onTeamSelect, onStadiumSelect }: MatchCardProps) {
   const { language } = useLanguage();
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const showScore = match.finished || match.live;
   const canAddToCalendar = !match.live && !match.finished;
+  const canSelectStadium = Boolean(match.stadiumId && match.stadium && onStadiumSelect);
 
   return (
     <>
@@ -215,10 +217,27 @@ export function MatchCard({ match, onTeamSelect }: MatchCardProps) {
       </div>
 
       <div className="mt-3 border-t border-slate-100 pt-2.5 dark:border-slate-700">
-        <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-          {match.stadium}
-          {match.city && ` · ${match.city}`}
-        </p>
+        {canSelectStadium ? (
+          <button
+            type="button"
+            onClick={() =>
+              onStadiumSelect!({
+                id: match.stadiumId!,
+                name: match.stadium,
+                city: match.city || undefined,
+              })
+            }
+            className="max-w-full truncate text-left text-xs text-slate-500 transition-colors hover:text-wc-green hover:underline dark:text-slate-400"
+          >
+            {match.stadium}
+            {match.city && ` · ${match.city}`}
+          </button>
+        ) : (
+          <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+            {match.stadium}
+            {match.city && ` · ${match.city}`}
+          </p>
+        )}
       </div>
     </article>
 

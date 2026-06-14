@@ -87,6 +87,7 @@ export function transformGame(
     kickoff,
     group: game.group,
     type: game.type,
+    stadiumId: game.stadium_id || undefined,
     stadium: stadium?.name_en ?? '',
     city: stadium?.city_en ?? '',
     finished,
@@ -100,6 +101,10 @@ export function filterMatchesByTeam(matches: Match[], teamId: string): Match[] {
   return matches.filter(
     (m) => m.homeTeamId === teamId || m.awayTeamId === teamId,
   );
+}
+
+export function filterMatchesByStadium(matches: Match[], stadiumId: string): Match[] {
+  return matches.filter((m) => m.stadiumId === stadiumId);
 }
 
 export function groupMatchesByDate(matches: Match[]): DateGroup[] {

@@ -1,6 +1,6 @@
 import { useLanguage } from '../context/LanguageContext';
 import { t } from '../i18n/translations';
-import type { Match, SelectedTeam } from '../types';
+import type { Match, SelectedStadium, SelectedTeam } from '../types';
 import { formatDateLabel, isToday } from '../utils/dates';
 import { MatchGrid } from './MatchGrid';
 
@@ -10,9 +10,17 @@ interface DateSectionProps {
   id?: string;
   columns?: 1 | 2;
   onTeamSelect?: (team: SelectedTeam) => void;
+  onStadiumSelect?: (stadium: SelectedStadium) => void;
 }
 
-export function DateSection({ dateKey, matches, id, columns = 1, onTeamSelect }: DateSectionProps) {
+export function DateSection({
+  dateKey,
+  matches,
+  id,
+  columns = 1,
+  onTeamSelect,
+  onStadiumSelect,
+}: DateSectionProps) {
   const { language } = useLanguage();
   const today = isToday(dateKey);
 
@@ -31,7 +39,12 @@ export function DateSection({ dateKey, matches, id, columns = 1, onTeamSelect }:
           {matches.length} {t(language, 'match')}{matches.length !== 1 && language === 'en' ? 'es' : ''}
         </span>
       </div>
-      <MatchGrid matches={matches} columns={columns} onTeamSelect={onTeamSelect} />
+      <MatchGrid
+        matches={matches}
+        columns={columns}
+        onTeamSelect={onTeamSelect}
+        onStadiumSelect={onStadiumSelect}
+      />
     </section>
   );
 }

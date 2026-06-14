@@ -3,19 +3,24 @@ import { Header } from './components/Header';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { DesktopSchedule } from './components/DesktopSchedule';
 import { MobileSchedule } from './components/MobileSchedule';
+import { StadiumMatchesView } from './components/StadiumMatchesView';
 import { TeamMatchesView } from './components/TeamMatchesView';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { MatchesProvider, useMatchesContext } from './context/MatchesContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { useIsDesktop } from './hooks/useMediaQuery';
 import { t } from './i18n/translations';
-import type { SelectedTeam } from './types';
-import { filterMatchesByTeam } from './utils/matches';
+import type { SelectedStadium, SelectedTeam } from './types';
+import { filterMatchesByStadium, filterMatchesByTeam } from './utils/matches';
+
+type DetailView =
+  | { kind: 'team'; entity: SelectedTeam }
+  | { kind: 'stadium'; entity: SelectedStadium };
 
 function ScheduleContent() {
   const { language } = useLanguage();
   const isDesktop = useIsDesktop();
-  const [selectedTeam, setSelectedTeam] = useState<SelectedTeam | null>(null);
+  const [detailView, setDetailView] = useState<DetailView | null>(null);
   const {
     dateGroups,
     allMatches,
@@ -28,13 +33,22 @@ function ScheduleContent() {
   } = useMatchesContext();
 
   const handleTeamSelect = useCallback((team: SelectedTeam) => {
-    setSelectedTeam(team);
+    setDetailView({ kind: 'team', entity: team });
   }, []);
 
-  const teamMatches = useMemo(() => {
-    if (!selectedTeam) return [];
-    return filterMatchesByTeam(allMatches, selectedTeam.id);
-  }, [allMatches, selectedTeam]);
+  const handleStadiumSelect = useCallback((stadium: SelectedStadium) => {
+    setDetailView({ kind: 'stadium', entity: stadium });
+  }, []);
+
+  const filteredMatches = useMemo(() => {
+    if (!detailView) return [];
+
+    if (detailView.kind === 'team') {
+      return filterMatchesByTeam(allMatches, detailView.entity.id);
+    }
+
+    return filterMatchesByStadium(allMatches, detailView.entity.id);
+  }, [allMatches, detailView]);
 
   if (loading) {
     return (
@@ -64,15 +78,31 @@ function ScheduleContent() {
     );
   }
 
-  if (selectedTeam) {
+  if (detailView?.kind === 'team') {
     return (
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
         <TeamMatchesView
-          team={selectedTeam}
-          matches={teamMatches}
+          team={detailView.entity}
+          matches={filteredMatches}
           columns={isDesktop ? 2 : 1}
-          onBack={() => setSelectedTeam(null)}
+          onBack={() => setDetailView(null)}
           onTeamSelect={handleTeamSelect}
+          onStadiumSelect={handleStadiumSelect}
+        />
+      </main>
+    );
+  }
+
+  if (detailView?.kind === 'stadium') {
+    return (
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
+        <StadiumMatchesView
+          stadium={detailView.entity}
+          matches={filteredMatches}
+          columns={isDesktop ? 2 : 1}
+          onBack={() => setDetailView(null)}
+          onTeamSelect={handleTeamSelect}
+          onStadiumSelect={handleStadiumSelect}
         />
       </main>
     );
@@ -87,12 +117,14 @@ function ScheduleContent() {
           activeDateKey={activeDateKey}
           onDateChange={setActiveDateKey}
           onTeamSelect={handleTeamSelect}
+          onStadiumSelect={handleStadiumSelect}
         />
       ) : (
         <MobileSchedule
           dateGroups={dateGroups}
           initialDateKey={activeDateKey}
           onTeamSelect={handleTeamSelect}
+          onStadiumSelect={handleStadiumSelect}
         />
       )}
     </main>

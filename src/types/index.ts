@@ -83,6 +83,12 @@ export interface SelectedTeam {
   flag?: string;
 }
 
+export interface SelectedStadium {
+  id: string;
+  name: string;
+  city?: string;
+}
+
 export interface Match {
   id: string;
   homeTeam: string;
@@ -98,6 +104,7 @@ export interface Match {
   kickoff: Date;
   group: string;
   type: string;
+  stadiumId?: string;
   stadium: string;
   city: string;
   finished: boolean;

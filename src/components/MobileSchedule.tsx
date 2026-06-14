@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { t } from '../i18n/translations';
-import type { DateGroup, SelectedTeam } from '../types';
+import type { DateGroup, SelectedStadium, SelectedTeam } from '../types';
 import { DateSection } from './DateSection';
 
 const PAGE_SIZE = 3;
@@ -10,9 +10,15 @@ interface MobileScheduleProps {
   dateGroups: DateGroup[];
   initialDateKey: string;
   onTeamSelect?: (team: SelectedTeam) => void;
+  onStadiumSelect?: (stadium: SelectedStadium) => void;
 }
 
-export function MobileSchedule({ dateGroups, initialDateKey, onTeamSelect }: MobileScheduleProps) {
+export function MobileSchedule({
+  dateGroups,
+  initialDateKey,
+  onTeamSelect,
+  onStadiumSelect,
+}: MobileScheduleProps) {
   const { language } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
@@ -124,6 +130,7 @@ export function MobileSchedule({ dateGroups, initialDateKey, onTeamSelect }: Mob
               matches={group.matches}
               columns={1}
               onTeamSelect={onTeamSelect}
+              onStadiumSelect={onStadiumSelect}
             />
           ))}
         </div>

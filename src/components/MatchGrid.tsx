@@ -1,13 +1,19 @@
-import type { Match, SelectedTeam } from '../types';
+import type { Match, SelectedStadium, SelectedTeam } from '../types';
 import { MatchCard } from './MatchCard';
 
 interface MatchGridProps {
   matches: Match[];
   columns?: 1 | 2;
   onTeamSelect?: (team: SelectedTeam) => void;
+  onStadiumSelect?: (stadium: SelectedStadium) => void;
 }
 
-export function MatchGrid({ matches, columns = 2, onTeamSelect }: MatchGridProps) {
+export function MatchGrid({
+  matches,
+  columns = 2,
+  onTeamSelect,
+  onStadiumSelect,
+}: MatchGridProps) {
   if (matches.length === 0) return null;
 
   return (
@@ -19,7 +25,12 @@ export function MatchGrid({ matches, columns = 2, onTeamSelect }: MatchGridProps
       }
     >
       {matches.map((match) => (
-        <MatchCard key={match.id} match={match} onTeamSelect={onTeamSelect} />
+        <MatchCard
+          key={match.id}
+          match={match}
+          onTeamSelect={onTeamSelect}
+          onStadiumSelect={onStadiumSelect}
+        />
       ))}
     </div>
   );
