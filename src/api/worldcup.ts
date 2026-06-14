@@ -63,7 +63,7 @@ async function fetchLiveData<T>(filename: string): Promise<T | null> {
 function gameFreshness(game: ApiGame): number {
   const elapsed = game.time_elapsed?.toLowerCase() ?? '';
   const finished =
-    game.finished.toUpperCase() === 'TRUE' ||
+    (game.finished ?? '').toUpperCase() === 'TRUE' ||
     elapsed === 'finished' ||
     elapsed === 'ft' ||
     elapsed === 'aet' ||

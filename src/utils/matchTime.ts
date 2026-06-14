@@ -123,7 +123,7 @@ function formatStoppageFromRaw(base: number, extra: number, lang: Language, knoc
 }
 
 export function formatMatchElapsedTime(
-  timeElapsed: string,
+  timeElapsed: string | null | undefined,
   lang: Language,
   options: {
     kickoff?: Date;
@@ -133,7 +133,7 @@ export function formatMatchElapsedTime(
   } = {},
 ): string | null {
   const { kickoff, now = new Date(), matchType = 'group', phase } = options;
-  const raw = timeElapsed.trim();
+  const raw = (timeElapsed ?? '').trim();
   if (!raw || raw === 'notstarted' || raw === 'null') return null;
 
   if (phase === 'penalties' || PENALTY_PATTERN.test(raw)) {

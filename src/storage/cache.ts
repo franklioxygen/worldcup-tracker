@@ -48,7 +48,7 @@ function groupGamesByDate(games: ApiGame[]): Map<string, ApiGame[]> {
 }
 
 function isDateFullyFinished(games: ApiGame[]): boolean {
-  return games.every((g) => g.finished.toUpperCase() === 'TRUE');
+  return games.every((g) => (g.finished ?? '').toUpperCase() === 'TRUE');
 }
 
 function isSyncedToday(lastSyncedAt: string): boolean {

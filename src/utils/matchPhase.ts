@@ -34,7 +34,11 @@ export interface ParsedScore {
 }
 
 /** Parse "1 (4)" style score strings from the API. */
-function parseScorePart(raw: string): { full: number; pen?: number } {
+function parseScorePart(raw: string | null | undefined): { full: number; pen?: number } {
+  if (raw == null || raw === 'null') {
+    return { full: 0 };
+  }
+
   const trimmed = raw.trim();
   const withPen = trimmed.match(/^(\d+)\s*\((\d+)\)$/);
   if (withPen) {
@@ -77,7 +81,7 @@ export function parseMatchPhase(
 ): MatchPhase {
   const elapsed = game.time_elapsed?.trim() ?? '';
   const elapsedLower = elapsed.toLowerCase();
-  const finishedFlag = game.finished.toUpperCase() === 'TRUE';
+  const finishedFlag = (game.finished ?? '').toUpperCase() === 'TRUE';
   const knockout = isKnockoutMatch(game.type);
 
   const hasPenScores =

@@ -93,7 +93,7 @@ export function transformGame(
     finished,
     live,
     phase,
-    timeElapsed: game.time_elapsed,
+    timeElapsed: game.time_elapsed ?? '',
   };
 }
 
