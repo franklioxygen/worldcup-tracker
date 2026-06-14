@@ -51,7 +51,7 @@ export function HeaderMobileMenu({ onOpenCodeOfConduct }: HeaderMobileMenuProps)
     ...(onOpenCodeOfConduct
       ? [{
           key: 'code-of-conduct',
-          label: t(language, 'codeOfConductTitle'),
+          label: t(language, 'codeOfConductMenu'),
           onClick: () => {
             onOpenCodeOfConduct();
             close();
@@ -141,7 +141,7 @@ export function HeaderMobileMenu({ onOpenCodeOfConduct }: HeaderMobileMenuProps)
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800"
+          className="absolute right-0 z-50 mt-2 w-max min-w-52 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800"
         >
           {items.map((item) => (
             <button
@@ -153,7 +153,7 @@ export function HeaderMobileMenu({ onOpenCodeOfConduct }: HeaderMobileMenuProps)
               className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-700/60"
             >
               <span className="shrink-0 text-slate-500 dark:text-slate-400">{item.icon}</span>
-              <span className="min-w-0 truncate">{item.label}</span>
+              <span className="whitespace-nowrap">{item.label}</span>
             </button>
           ))}
         </div>
