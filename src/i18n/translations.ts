@@ -98,6 +98,9 @@ const uiStrings = {
     duration: 'Duration',
     hours: 'hours',
     stage: 'Stage',
+    codeOfConductTitle: 'Stadium Code of Conduct',
+    codeOfConductSubtitle: 'FIFA World Cup 2026™ venue rules for ticket holders',
+    menu: 'Menu',
   },
   zh: {
     title: '2026 国际足联世界杯',
@@ -145,6 +148,9 @@ const uiStrings = {
     duration: '时长',
     hours: '小时',
     stage: '阶段',
+    codeOfConductTitle: '体育场行为准则',
+    codeOfConductSubtitle: '2026 国际足联世界杯™ 持票观众场馆规定',
+    menu: '菜单',
   },
 } as const;
 

@@ -62,3 +62,74 @@ body {
   background: #64748b;
   border-color: #1e293b;
 }
+
+.code-of-conduct {
+  color: #334155;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+
+.dark .code-of-conduct {
+  color: #cbd5e1;
+}
+
+.code-of-conduct h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 1rem;
+}
+
+.code-of-conduct h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 2rem 0 0.75rem;
+}
+
+.dark .code-of-conduct h1,
+.dark .code-of-conduct h2 {
+  color: #f8fafc;
+}
+
+.code-of-conduct p {
+  margin: 0 0 1rem;
+}
+
+.code-of-conduct strong {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.dark .code-of-conduct strong {
+  color: #f1f5f9;
+}
+
+.code-of-conduct hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 1.5rem 0;
+}
+
+.dark .code-of-conduct hr {
+  border-top-color: #334155;
+}
+
+.code-of-conduct ul,
+.code-of-conduct ol {
+  margin: 0 0 1rem;
+  padding-left: 1.5rem;
+}
+
+.code-of-conduct li {
+  margin-bottom: 0.5rem;
+}
+
+.code-of-conduct em {
+  color: #64748b;
+  font-style: italic;
+}
+
+.dark .code-of-conduct em {
+  color: #94a3b8;
+}

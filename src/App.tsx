@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { DesktopSchedule } from './components/DesktopSchedule';
 import { MobileSchedule } from './components/MobileSchedule';
+import { CodeOfConductView } from './components/CodeOfConductView';
 import { StadiumMatchesView } from './components/StadiumMatchesView';
 import { TeamMatchesView } from './components/TeamMatchesView';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -15,12 +16,18 @@ import { filterMatchesByStadium, filterMatchesByTeam } from './utils/matches';
 
 type DetailView =
   | { kind: 'team'; entity: SelectedTeam }
-  | { kind: 'stadium'; entity: SelectedStadium };
+  | { kind: 'stadium'; entity: SelectedStadium }
+  | { kind: 'codeOfConduct' };
 
-function ScheduleContent() {
+function ScheduleContent({
+  detailView,
+  setDetailView,
+}: {
+  detailView: DetailView | null;
+  setDetailView: (view: DetailView | null) => void;
+}) {
   const { language } = useLanguage();
   const isDesktop = useIsDesktop();
-  const [detailView, setDetailView] = useState<DetailView | null>(null);
   const {
     dateGroups,
     allMatches,
@@ -34,11 +41,11 @@ function ScheduleContent() {
 
   const handleTeamSelect = useCallback((team: SelectedTeam) => {
     setDetailView({ kind: 'team', entity: team });
-  }, []);
+  }, [setDetailView]);
 
   const handleStadiumSelect = useCallback((stadium: SelectedStadium) => {
     setDetailView({ kind: 'stadium', entity: stadium });
-  }, []);
+  }, [setDetailView]);
 
   const filteredMatches = useMemo(() => {
     if (!detailView) return [];
@@ -47,7 +54,11 @@ function ScheduleContent() {
       return filterMatchesByTeam(allMatches, detailView.entity.id);
     }
 
-    return filterMatchesByStadium(allMatches, detailView.entity.id);
+    if (detailView.kind === 'stadium') {
+      return filterMatchesByStadium(allMatches, detailView.entity.id);
+    }
+
+    return [];
   }, [allMatches, detailView]);
 
   if (loading) {
@@ -74,6 +85,14 @@ function ScheduleContent() {
         >
           {t(language, 'retry')}
         </button>
+      </main>
+    );
+  }
+
+  if (detailView?.kind === 'codeOfConduct') {
+    return (
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
+        <CodeOfConductView onBack={() => setDetailView(null)} />
       </main>
     );
   }
@@ -131,15 +150,27 @@ function ScheduleContent() {
   );
 }
 
+function AppContent() {
+  const [detailView, setDetailView] = useState<DetailView | null>(null);
+
+  const handleOpenCodeOfConduct = useCallback(() => {
+    setDetailView({ kind: 'codeOfConduct' });
+  }, []);
+
+  return (
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <Header onOpenCodeOfConduct={handleOpenCodeOfConduct} />
+      <ScheduleContent detailView={detailView} setDetailView={setDetailView} />
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
         <MatchesProvider>
-          <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-            <Header />
-            <ScheduleContent />
-          </div>
+          <AppContent />
         </MatchesProvider>
       </LanguageProvider>
     </ThemeProvider>
