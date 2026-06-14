@@ -61,15 +61,22 @@ async function fetchLiveData<T>(filename: string): Promise<T | null> {
 }
 
 function gameFreshness(game: ApiGame): number {
-  const finished = game.finished.toUpperCase() === 'TRUE';
   const elapsed = game.time_elapsed?.toLowerCase() ?? '';
+  const finished =
+    game.finished.toUpperCase() === 'TRUE' ||
+    elapsed === 'finished' ||
+    elapsed === 'ft' ||
+    elapsed === 'aet' ||
+    /pen/.test(elapsed);
 
-  if (finished || elapsed === 'finished' || elapsed === 'ft') {
+  if (finished) {
     return 1_000 + (Number(game.home_score) || 0) + (Number(game.away_score) || 0);
   }
 
   if (elapsed !== 'notstarted' && elapsed !== 'null' && elapsed !== '') {
-    return 500 + (Number(game.home_score) || 0) + (Number(game.away_score) || 0);
+    const phaseBonus =
+      /pen|shootout/.test(elapsed) ? 80 : /et|extra/.test(elapsed) ? 40 : 0;
+    return 500 + phaseBonus + (Number(game.home_score) || 0) + (Number(game.away_score) || 0);
   }
 
   return 0;

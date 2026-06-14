@@ -2,6 +2,17 @@ export type Language = 'en' | 'zh';
 
 export type Theme = 'light' | 'dark';
 
+export type MatchPhase =
+  | 'scheduled'
+  | 'live'
+  | 'halftime'
+  | 'extraTime'
+  | 'extraTimeHalftime'
+  | 'penalties'
+  | 'finished'
+  | 'finishedAET'
+  | 'finishedPenalties';
+
 export interface ApiGame {
   _id: string;
   id: string;
@@ -25,6 +36,20 @@ export interface ApiGame {
   away_team_name_fa?: string;
   home_team_label?: string;
   away_team_label?: string;
+  /** Optional penalty-shootout scores when provided by the live API. */
+  home_pen_score?: string;
+  away_pen_score?: string;
+  home_penalty_score?: string;
+  away_penalty_score?: string;
+  home_score_penalties?: string;
+  away_score_penalties?: string;
+  home_penalties?: string;
+  away_penalties?: string;
+  /** Regulation / ET score before penalties, when split out by the API. */
+  home_score_regulation?: string;
+  away_score_regulation?: string;
+  home_score_90?: string;
+  away_score_90?: string;
 }
 
 export interface ApiTeam {
@@ -78,6 +103,10 @@ export interface Match {
   finished: boolean;
   live: boolean;
   timeElapsed: string;
+  phase: MatchPhase;
+  homePenScore?: number;
+  awayPenScore?: number;
+  showPenaltyScores: boolean;
 }
 
 export interface DateGroup {

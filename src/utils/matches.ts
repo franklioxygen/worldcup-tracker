@@ -1,6 +1,14 @@
 import type { ApiGame, ApiStadium, ApiTeam, DateGroup, Language, Match } from '../types';
 import { translateKnockoutLabel, translateTeamName } from '../i18n/translations';
 import { formatUserLocalTime, getDateKey, stadiumLocalToDate } from './dates';
+import {
+  enrichScoresForPhase,
+  isFinishedPhase,
+  isLivePhase,
+  parseGameScores,
+  parseMatchPhase,
+  shouldShowPenaltyScores,
+} from './matchPhase';
 import { getStadiumTimeZone } from './timezones';
 
 export function buildTeamMap(teams: ApiTeam[]): Map<string, ApiTeam> {
@@ -50,9 +58,11 @@ export function transformGame(
   lang: Language,
 ): Match {
   const stadium = stadiumMap.get(game.stadium_id);
-  const elapsed = game.time_elapsed.toLowerCase();
-  const finished = game.finished.toUpperCase() === 'TRUE' || elapsed === 'finished' || elapsed === 'ft';
-  const live = !finished && elapsed !== 'notstarted' && elapsed !== 'null';
+  const parsedScores = parseGameScores(game);
+  const phase = parseMatchPhase(game, parsedScores);
+  const scores = enrichScoresForPhase(game, parsedScores, phase);
+  const finished = isFinishedPhase(phase);
+  const live = isLivePhase(phase);
   const timeZone = getStadiumTimeZone(game.stadium_id);
   const kickoff = stadiumLocalToDate(game.local_date, timeZone);
 
@@ -65,8 +75,11 @@ export function transformGame(
     awayTeam: resolveTeamName(game, 'away', teamMap, lang),
     homeTeamId,
     awayTeamId,
-    homeScore: Number(game.home_score) || 0,
-    awayScore: Number(game.away_score) || 0,
+    homeScore: scores.homeScore,
+    awayScore: scores.awayScore,
+    homePenScore: scores.homePenScore,
+    awayPenScore: scores.awayPenScore,
+    showPenaltyScores: shouldShowPenaltyScores(phase, scores),
     homeFlag: resolveFlag(game, 'home', teamMap),
     awayFlag: resolveFlag(game, 'away', teamMap),
     dateKey: getDateKey(game.local_date),
@@ -78,6 +91,7 @@ export function transformGame(
     city: stadium?.city_en ?? '',
     finished,
     live,
+    phase,
     timeElapsed: game.time_elapsed,
   };
 }

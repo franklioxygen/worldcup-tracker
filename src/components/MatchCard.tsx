@@ -3,6 +3,7 @@ import { AddToCalendarModal } from './AddToCalendarModal';
 import { useLanguage } from '../context/LanguageContext';
 import { t, translateMatchType } from '../i18n/translations';
 import type { Match, SelectedTeam } from '../types';
+import { getFinishedBadgeKey } from '../utils/matchPhase';
 import { formatMatchElapsedTime } from '../utils/matchTime';
 
 interface MatchCardProps {
@@ -64,13 +65,26 @@ function TeamName({
   );
 }
 
-function Score({ score, showScore }: { score: number; showScore: boolean }) {
-  if (!showScore) return null;
-
+function ScoreBlock({
+  score,
+  penScore,
+  showPenaltyScores,
+}: {
+  score: number;
+  penScore?: number;
+  showPenaltyScores: boolean;
+}) {
   return (
-    <span className="shrink-0 text-xl font-bold tabular-nums text-slate-900 dark:text-white">
-      {score}
-    </span>
+    <div className="flex shrink-0 flex-col items-center leading-none">
+      <span className="text-xl font-bold tabular-nums text-slate-900 dark:text-white">
+        {score}
+      </span>
+      {showPenaltyScores && penScore !== undefined && (
+        <span className="mt-0.5 text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+          ({penScore})
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -91,7 +105,12 @@ function StatusBadge({
   }, [match.live]);
 
   if (match.live) {
-    const elapsed = formatMatchElapsedTime(match.timeElapsed, language, match.kickoff, now);
+    const elapsed = formatMatchElapsedTime(match.timeElapsed, language, {
+      kickoff: match.kickoff,
+      now,
+      matchType: match.type,
+      phase: match.phase,
+    });
 
     return (
       <span className="inline-flex items-center gap-1.5">
@@ -109,9 +128,10 @@ function StatusBadge({
   }
 
   if (match.finished) {
+    const badgeKey = getFinishedBadgeKey(match.phase);
     return (
       <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-        {t(language, 'finished')}
+        {t(language, badgeKey)}
       </span>
     );
   }
@@ -166,7 +186,11 @@ export function MatchCard({ match, onTeamSelect }: MatchCardProps) {
           onTeamSelect={onTeamSelect}
         />
         {showScore && (
-          <Score score={match.homeScore} showScore={showScore} />
+          <ScoreBlock
+            score={match.homeScore}
+            penScore={match.homePenScore}
+            showPenaltyScores={match.showPenaltyScores}
+          />
         )}
 
         <span className="px-0.5 text-center text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
@@ -174,7 +198,11 @@ export function MatchCard({ match, onTeamSelect }: MatchCardProps) {
         </span>
 
         {showScore && (
-          <Score score={match.awayScore} showScore={showScore} />
+          <ScoreBlock
+            score={match.awayScore}
+            penScore={match.awayPenScore}
+            showPenaltyScores={match.showPenaltyScores}
+          />
         )}
         <TeamName
           name={match.awayTeam}
