@@ -33,9 +33,21 @@ function applyCache(
   setTeams: (t: ApiTeam[]) => void,
   setStadiums: (s: ApiStadium[]) => void,
 ) {
-  setGames(cache.games);
-  setTeams(cache.teams);
-  setStadiums(cache.stadiums);
+  // Clone arrays so React always sees a new reference (same refs caused stale UI after refresh).
+  setGames([...cache.games]);
+  setTeams([...cache.teams]);
+  setStadiums([...cache.stadiums]);
+}
+
+/** Re-read from localStorage after save so state matches a full page reload. */
+function applySavedCache(
+  setGames: (g: ApiGame[]) => void,
+  setTeams: (t: ApiTeam[]) => void,
+  setStadiums: (s: ApiStadium[]) => void,
+): WcCache | null {
+  const saved = loadCache();
+  if (saved) applyCache(saved, setGames, setTeams, setStadiums);
+  return saved;
 }
 
 export function useMatches(language: Language): UseMatchesResult {
@@ -46,8 +58,22 @@ export function useMatches(language: Language): UseMatchesResult {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeDateKeyOverride, setActiveDateKeyOverride] = useState<string | null>(null);
-  const syncingRef = useRef(false);
+  const fetchGenerationRef = useRef(0);
   const refreshingRef = useRef(false);
+
+  const fetchAndApply = useCallback(async (): Promise<boolean> => {
+    const generation = ++fetchGenerationRef.current;
+
+    try {
+      await fetchAndBuildCache();
+    } catch {
+      if (generation !== fetchGenerationRef.current) return false;
+      return applySavedCache(setGames, setTeams, setStadiums) !== null;
+    }
+
+    if (generation !== fetchGenerationRef.current) return false;
+    return applySavedCache(setGames, setTeams, setStadiums) !== null;
+  }, []);
 
   const load = useCallback(async (force = false) => {
     setError(null);
@@ -58,22 +84,21 @@ export function useMatches(language: Language): UseMatchesResult {
       applyCache(cached, setGames, setTeams, setStadiums);
       setLoading(false);
 
-      if (!syncingRef.current) {
-        syncingRef.current = true;
-        syncCacheIfNeeded(cached)
-          .then((updated) => applyCache(updated, setGames, setTeams, setStadiums))
-          .catch(() => {})
-          .finally(() => {
-            syncingRef.current = false;
-          });
-      }
+      const generation = ++fetchGenerationRef.current;
+      syncCacheIfNeeded(cached)
+        .then((updated) => {
+          if (generation !== fetchGenerationRef.current) return;
+          if (updated === cached) return;
+          applySavedCache(setGames, setTeams, setStadiums);
+        })
+        .catch(() => {});
       return;
     }
 
     setLoading(true);
     try {
-      const cache = await fetchAndBuildCache();
-      applyCache(cache, setGames, setTeams, setStadiums);
+      const ok = await fetchAndApply();
+      if (!ok && !cached) setError('fetch_failed');
     } catch {
       if (cached) {
         applyCache(cached, setGames, setTeams, setStadiums);
@@ -83,7 +108,7 @@ export function useMatches(language: Language): UseMatchesResult {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchAndApply]);
 
   useEffect(() => {
     load();
@@ -101,8 +126,10 @@ export function useMatches(language: Language): UseMatchesResult {
     const cached = loadCache();
 
     try {
-      const cache = await fetchAndBuildCache();
-      applyCache(cache, setGames, setTeams, setStadiums);
+      const ok = await fetchAndApply();
+      if (!ok && !cached && games.length === 0) {
+        setError('fetch_failed');
+      }
     } catch {
       if (cached) {
         applyCache(cached, setGames, setTeams, setStadiums);
@@ -115,7 +142,7 @@ export function useMatches(language: Language): UseMatchesResult {
         setRefreshing(false);
       }
     }
-  }, [games.length]);
+  }, [fetchAndApply, games.length]);
 
   const allMatches = useMemo(() => {
     if (games.length === 0) return [];
