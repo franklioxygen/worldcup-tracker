@@ -45,8 +45,7 @@ export function useMatches(language: Language): UseMatchesResult {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeDateKey, setActiveDateKey] = useState('');
-  const [initialized, setInitialized] = useState(false);
+  const [activeDateKeyOverride, setActiveDateKeyOverride] = useState<string | null>(null);
   const syncingRef = useRef(false);
   const refreshingRef = useRef(false);
 
@@ -134,12 +133,14 @@ export function useMatches(language: Language): UseMatchesResult {
   const dateGroups = useMemo(() => groupMatchesByDate(allMatches), [allMatches]);
   const dateKeys = useMemo(() => dateGroups.map((g) => g.dateKey), [dateGroups]);
 
-  useEffect(() => {
-    if (dateKeys.length > 0 && !initialized) {
-      setActiveDateKey(getCurrentOrNextDateKey(dateKeys));
-      setInitialized(true);
-    }
-  }, [dateKeys, initialized]);
+  const defaultDateKey = useMemo(
+    () => (dateKeys.length > 0 ? getCurrentOrNextDateKey(dateKeys) : ''),
+    [dateKeys],
+  );
+  const activeDateKey = activeDateKeyOverride ?? defaultDateKey;
+  const setActiveDateKey = useCallback((key: string) => {
+    setActiveDateKeyOverride(key);
+  }, []);
 
   const hasLiveMatches = useMemo(
     () => allMatches.some((match) => match.live),
