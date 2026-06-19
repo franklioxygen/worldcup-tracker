@@ -13,6 +13,17 @@ interface MobileScheduleProps {
   onStadiumSelect?: (stadium: SelectedStadium) => void;
 }
 
+function getWindowForIndex(index: number, length: number) {
+  if (length === 0 || index < 0) {
+    return { start: 0, end: 0 };
+  }
+
+  return {
+    start: Math.max(0, index - 1),
+    end: Math.min(length - 1, index + PAGE_SIZE),
+  };
+}
+
 export function MobileSchedule({
   dateGroups,
   initialDateKey,
@@ -24,25 +35,49 @@ export function MobileSchedule({
   const topSentinelRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
   const hasScrolledRef = useRef(false);
+  const initialWindowSetRef = useRef(false);
+  const [paginationEnabled, setPaginationEnabled] = useState(false);
 
-  const initialIndex = Math.max(
-    0,
-    dateGroups.findIndex((g) => g.dateKey === initialDateKey),
+  const getTargetIndex = useCallback(
+    () => Math.max(0, dateGroups.findIndex((g) => g.dateKey === initialDateKey)),
+    [dateGroups, initialDateKey],
   );
 
-  const [startIndex, setStartIndex] = useState(() =>
-    Math.max(0, initialIndex - 1),
-  );
-  const [endIndex, setEndIndex] = useState(() =>
-    Math.min(dateGroups.length - 1, initialIndex + PAGE_SIZE),
-  );
+  const [startIndex, setStartIndex] = useState(() => {
+    const targetIndex = Math.max(
+      0,
+      dateGroups.findIndex((g) => g.dateKey === initialDateKey),
+    );
+    return getWindowForIndex(targetIndex, dateGroups.length).start;
+  });
+  const [endIndex, setEndIndex] = useState(() => {
+    const targetIndex = Math.max(
+      0,
+      dateGroups.findIndex((g) => g.dateKey === initialDateKey),
+    );
+    return getWindowForIndex(targetIndex, dateGroups.length).end;
+  });
   const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [loadingLater, setLoadingLater] = useState(false);
 
   const visibleGroups = dateGroups.slice(startIndex, endIndex + 1);
 
+  useEffect(() => {
+    if (!initialDateKey || dateGroups.length === 0 || initialWindowSetRef.current) return;
+
+    const targetIndex = getTargetIndex();
+    if (targetIndex < 0) return;
+
+    const { start, end } = getWindowForIndex(targetIndex, dateGroups.length);
+    setStartIndex(start);
+    setEndIndex(end);
+    initialWindowSetRef.current = true;
+    hasScrolledRef.current = false;
+    setPaginationEnabled(false);
+  }, [initialDateKey, dateGroups, getTargetIndex]);
+
   const loadEarlier = useCallback(() => {
-    if (startIndex <= 0 || loadingEarlier) return;
+    if (!paginationEnabled || startIndex <= 0 || loadingEarlier) return;
     setLoadingEarlier(true);
     const prevScrollHeight = containerRef.current?.scrollHeight ?? 0;
     setStartIndex((prev) => Math.max(0, prev - PAGE_SIZE));
@@ -53,18 +88,20 @@ export function MobileSchedule({
       }
       setLoadingEarlier(false);
     });
-  }, [startIndex, loadingEarlier]);
+  }, [paginationEnabled, startIndex, loadingEarlier]);
 
   const loadLater = useCallback(() => {
-    if (endIndex >= dateGroups.length - 1 || loadingLater) return;
+    if (!paginationEnabled || endIndex >= dateGroups.length - 1 || loadingLater) {
+      return;
+    }
     setLoadingLater(true);
     setEndIndex((prev) => Math.min(dateGroups.length - 1, prev + PAGE_SIZE));
     setTimeout(() => setLoadingLater(false), 300);
-  }, [endIndex, dateGroups.length, loadingLater]);
+  }, [paginationEnabled, endIndex, dateGroups.length, loadingLater]);
 
   useEffect(() => {
     const root = containerRef.current;
-    if (!root) return;
+    if (!root || !paginationEnabled) return;
 
     const topObserver = new IntersectionObserver(
       (entries) => {
@@ -90,26 +127,40 @@ export function MobileSchedule({
       if (topEl) topObserver.unobserve(topEl);
       if (bottomEl) bottomObserver.unobserve(bottomEl);
     };
-  }, [loadEarlier, loadLater, visibleGroups]);
+  }, [loadEarlier, loadLater, paginationEnabled, visibleGroups]);
 
   useEffect(() => {
     if (hasScrolledRef.current || !initialDateKey) return;
 
-    const timer = setTimeout(() => {
+    const targetIndex = getTargetIndex();
+    if (targetIndex < 0 || targetIndex < startIndex || targetIndex > endIndex) return;
+
+    let cancelled = false;
+
+    const scrollToTarget = () => {
+      if (cancelled || hasScrolledRef.current) return;
+
       const container = containerRef.current;
       const el = document.getElementById(`date-${initialDateKey}`);
-      if (container && el) {
-        const top =
-          el.getBoundingClientRect().top -
-          container.getBoundingClientRect().top +
-          container.scrollTop;
-        container.scrollTo({ top, behavior: 'auto' });
-        hasScrolledRef.current = true;
-      }
-    }, 100);
+      if (!container || !el) return;
 
-    return () => clearTimeout(timer);
-  }, [initialDateKey, visibleGroups]);
+      const top =
+        el.getBoundingClientRect().top -
+        container.getBoundingClientRect().top +
+        container.scrollTop;
+      container.scrollTo({ top, behavior: 'auto' });
+      hasScrolledRef.current = true;
+      setPaginationEnabled(true);
+    };
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(scrollToTarget);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialDateKey, startIndex, endIndex, getTargetIndex]);
 
   return (
     <div ref={containerRef} className="min-h-0 flex-1 overflow-y-auto">
