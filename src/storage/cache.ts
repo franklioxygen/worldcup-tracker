@@ -1,4 +1,4 @@
-import { fetchGames, fetchStadiums, fetchTeams } from '../api/worldcup';
+import { fetchGames, fetchStadiums, fetchTeams, mergeGames } from '../api/worldcup';
 import type { ApiGame, ApiStadium, ApiTeam } from '../types';
 import { getDateKey, getTodayKey } from '../utils/dates';
 
@@ -96,11 +96,29 @@ export function shouldSyncFromApi(cache: WcCache): boolean {
   return false;
 }
 
+/** Refresh scores only — reuse cached teams/stadiums to reduce live API calls. */
+export async function refreshGamesInCache(cache: WcCache): Promise<WcCache> {
+  const fetchedGames = await fetchGames();
+  const games = mergeGames(cache.games, fetchedGames);
+  const updated: WcCache = {
+    ...cache,
+    games,
+    lastSyncedAt: new Date().toISOString(),
+    syncedDateKeys: computeSyncedDateKeys(games),
+  };
+  saveCache(updated);
+  return updated;
+}
+
 export async function fetchAndBuildCache(): Promise<WcCache> {
-  const [games, teams, stadiums] = await Promise.all([
-    fetchGames(),
-    fetchTeams(),
-    fetchStadiums(),
+  const existing = loadCache();
+  const fetchedGames = await fetchGames();
+  const games =
+    existing?.games?.length ? mergeGames(existing.games, fetchedGames) : fetchedGames;
+
+  const [teams, stadiums] = await Promise.all([
+    existing?.teams?.length ? Promise.resolve(existing.teams) : fetchTeams(),
+    existing?.stadiums?.length ? Promise.resolve(existing.stadiums) : fetchStadiums(),
   ]);
 
   const cache: WcCache = {
@@ -118,5 +136,5 @@ export async function fetchAndBuildCache(): Promise<WcCache> {
 
 export async function syncCacheIfNeeded(cache: WcCache): Promise<WcCache> {
   if (!shouldSyncFromApi(cache)) return cache;
-  return fetchAndBuildCache();
+  return refreshGamesInCache(cache);
 }
