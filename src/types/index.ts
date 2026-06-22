@@ -114,6 +114,10 @@ export interface Match {
   homePenScore?: number;
   awayPenScore?: number;
   showPenaltyScores: boolean;
+  /** Polymarket moneyline win chance (0–100), when available. */
+  homeWinChance?: number;
+  awayWinChance?: number;
+  winChanceLoading?: boolean;
 }
 
 export interface DateGroup {

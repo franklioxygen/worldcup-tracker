@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useMatchesContext } from '../context/MatchesContext';
 import { t } from '../i18n/translations';
 import type { Match, SelectedStadium, SelectedTeam } from '../types';
 import { groupMatchesByDate } from '../utils/matches';
@@ -27,7 +28,13 @@ export function FilteredMatchesView({
   onStadiumSelect,
 }: FilteredMatchesViewProps) {
   const { language } = useLanguage();
+  const { fetchWinChancesForDates } = useMatchesContext();
   const dateGroups = groupMatchesByDate(matches);
+
+  useEffect(() => {
+    const keys = [...new Set(matches.map((match) => match.dateKey))];
+    fetchWinChancesForDates(keys);
+  }, [matches, fetchWinChancesForDates]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

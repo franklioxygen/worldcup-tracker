@@ -12,21 +12,56 @@ interface MatchCardProps {
   onStadiumSelect?: (stadium: SelectedStadium) => void;
 }
 
-function Flag({ flag }: { flag?: string }) {
-  if (flag) {
-    return (
-      <img
-        src={flag}
-        alt=""
-        className="h-6 w-8 shrink-0 rounded-sm object-cover shadow-sm"
-        loading="lazy"
-      />
-    );
-  }
+function WinChanceDots() {
+  return (
+    <span className="inline-flex items-center gap-px" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="h-[3px] w-[3px] rounded-full bg-slate-400 animate-pulse dark:bg-slate-500"
+          style={{ animationDelay: `${i * 200}ms` }}
+        />
+      ))}
+    </span>
+  );
+}
+
+function Flag({
+  flag,
+  winChance,
+  loading,
+}: {
+  flag?: string;
+  winChance?: number;
+  loading?: boolean;
+}) {
+  const showOdds = loading || winChance !== undefined;
 
   return (
-    <div className="flex h-6 w-8 shrink-0 items-center justify-center rounded-sm bg-slate-200 text-[10px] font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-400">
-      ?
+    <div className="relative shrink-0">
+      {flag ? (
+        <img
+          src={flag}
+          alt=""
+          className="h-6 w-8 rounded-sm object-cover shadow-sm"
+          loading="lazy"
+        />
+      ) : (
+        <div className="flex h-6 w-8 items-center justify-center rounded-sm bg-slate-200 text-[10px] font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-400">
+          ?
+        </div>
+      )}
+      {showOdds && (
+        <span className="absolute left-1/2 top-full mt-0.5 -translate-x-1/2 whitespace-nowrap">
+          {loading ? (
+            <WinChanceDots />
+          ) : (
+            <span className="text-[9px] font-medium leading-none tabular-nums text-slate-400 dark:text-slate-500">
+              {winChance}%
+            </span>
+          )}
+        </span>
+      )}
     </div>
   );
 }
@@ -155,6 +190,10 @@ export function MatchCard({ match, onTeamSelect, onStadiumSelect }: MatchCardPro
   const showScore = match.finished || match.live;
   const canAddToCalendar = !match.live && !match.finished;
   const canSelectStadium = Boolean(match.stadiumId && match.stadium && onStadiumSelect);
+  const showOdds =
+    match.winChanceLoading ||
+    match.homeWinChance !== undefined ||
+    match.awayWinChance !== undefined;
 
   return (
     <>
@@ -175,12 +214,18 @@ export function MatchCard({ match, onTeamSelect, onStadiumSelect }: MatchCardPro
 
       <div
         className={`grid items-center gap-x-2 py-3 sm:gap-x-3 sm:py-4 ${
+          showOdds ? 'pb-5' : ''
+        } ${
           showScore
             ? 'grid-cols-[auto_minmax(0,1fr)_auto_auto_auto_minmax(0,1fr)_auto]'
             : 'grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto]'
         }`}
       >
-        <Flag flag={match.homeFlag} />
+        <Flag
+          flag={match.homeFlag}
+          winChance={match.homeWinChance}
+          loading={match.winChanceLoading}
+        />
         <TeamName
           name={match.homeTeam}
           teamId={match.homeTeamId}
@@ -213,7 +258,11 @@ export function MatchCard({ match, onTeamSelect, onStadiumSelect }: MatchCardPro
           align="right"
           onTeamSelect={onTeamSelect}
         />
-        <Flag flag={match.awayFlag} />
+        <Flag
+          flag={match.awayFlag}
+          winChance={match.awayWinChance}
+          loading={match.winChanceLoading}
+        />
       </div>
 
       <div className="mt-3 border-t border-slate-100 pt-2.5 dark:border-slate-700">

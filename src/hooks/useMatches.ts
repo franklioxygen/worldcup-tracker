@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ApiGame, ApiStadium, ApiTeam, DateGroup, Language, Match } from '../types';
+import { useWinChances } from './useWinChances';
 import {
   fetchAndBuildCache,
   loadCache,
   syncCacheIfNeeded,
   type WcCache,
 } from '../storage/cache';
-import { getCurrentOrNextDateKey } from '../utils/dates';
+import { getCurrentOrNextDateKey, getTodayKey } from '../utils/dates';
 import {
   buildStadiumMap,
   buildTeamMap,
@@ -25,6 +26,7 @@ interface UseMatchesResult {
   error: string | null;
   retry: () => void;
   refresh: (options?: { silent?: boolean }) => void;
+  fetchWinChancesForDates: (dateKeys: string[]) => void;
 }
 
 function applyCache(
@@ -50,6 +52,10 @@ function applySavedCache(
   return saved;
 }
 
+function shouldShowWinChances(match: Match): boolean {
+  return match.dateKey >= getTodayKey() && !match.finished;
+}
+
 export function useMatches(language: Language): UseMatchesResult {
   const [games, setGames] = useState<ApiGame[]>([]);
   const [teams, setTeams] = useState<ApiTeam[]>([]);
@@ -60,6 +66,13 @@ export function useMatches(language: Language): UseMatchesResult {
   const [activeDateKeyOverride, setActiveDateKeyOverride] = useState<string | null>(null);
   const fetchGenerationRef = useRef(0);
   const refreshingRef = useRef(false);
+
+  const {
+    winChances,
+    loadingGameIds,
+    fetchForDateKeys,
+    refetchRequested,
+  } = useWinChances(games, teams);
 
   const fetchAndApply = useCallback(async (): Promise<boolean> => {
     const generation = ++fetchGenerationRef.current;
@@ -129,6 +142,8 @@ export function useMatches(language: Language): UseMatchesResult {
       const ok = await fetchAndApply();
       if (!ok && !cached && games.length === 0) {
         setError('fetch_failed');
+      } else if (ok) {
+        await refetchRequested();
       }
     } catch {
       if (cached) {
@@ -142,7 +157,7 @@ export function useMatches(language: Language): UseMatchesResult {
         setRefreshing(false);
       }
     }
-  }, [fetchAndApply, games.length]);
+  }, [fetchAndApply, games.length, refetchRequested]);
 
   const allMatches = useMemo(() => {
     if (games.length === 0) return [];
@@ -150,12 +165,25 @@ export function useMatches(language: Language): UseMatchesResult {
     const teamMap = buildTeamMap(teams);
     const stadiumMap = buildStadiumMap(stadiums);
     return games
-      .map((game) => transformGame(game, teamMap, stadiumMap, language))
+      .map((game) => {
+        const match = transformGame(game, teamMap, stadiumMap, language, winChances[game.id]);
+        if (!shouldShowWinChances(match)) {
+          return {
+            ...match,
+            homeWinChance: undefined,
+            awayWinChance: undefined,
+          };
+        }
+        if (loadingGameIds.has(game.id)) {
+          return { ...match, winChanceLoading: true };
+        }
+        return match;
+      })
       .sort((a, b) => {
         const dateCompare = a.dateKey.localeCompare(b.dateKey);
         return dateCompare !== 0 ? dateCompare : a.kickoff.getTime() - b.kickoff.getTime();
       });
-  }, [games, teams, stadiums, language]);
+  }, [games, teams, stadiums, language, winChances, loadingGameIds]);
 
   const dateGroups = useMemo(() => groupMatchesByDate(allMatches), [allMatches]);
   const dateKeys = useMemo(() => dateGroups.map((g) => g.dateKey), [dateGroups]);
@@ -168,6 +196,13 @@ export function useMatches(language: Language): UseMatchesResult {
   const setActiveDateKey = useCallback((key: string) => {
     setActiveDateKeyOverride(key);
   }, []);
+
+  const fetchWinChancesForDates = useCallback(
+    (keys: string[]) => {
+      void fetchForDateKeys(keys);
+    },
+    [fetchForDateKeys],
+  );
 
   const hasLiveMatches = useMemo(
     () => allMatches.some((match) => match.live),
@@ -195,5 +230,6 @@ export function useMatches(language: Language): UseMatchesResult {
     error,
     retry: () => load(true),
     refresh,
+    fetchWinChancesForDates,
   };
 }

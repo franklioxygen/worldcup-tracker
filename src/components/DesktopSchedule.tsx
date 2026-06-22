@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useMatchesContext } from '../context/MatchesContext';
 import { t } from '../i18n/translations';
 import type { DateGroup, SelectedStadium, SelectedTeam } from '../types';
 import { DateTabs } from './DateTabs';
@@ -22,7 +24,12 @@ export function DesktopSchedule({
   onStadiumSelect,
 }: DesktopScheduleProps) {
   const { language } = useLanguage();
+  const { fetchWinChancesForDates } = useMatchesContext();
   const activeGroup = dateGroups.find((g) => g.dateKey === activeDateKey);
+
+  useEffect(() => {
+    if (activeDateKey) fetchWinChancesForDates([activeDateKey]);
+  }, [activeDateKey, fetchWinChancesForDates]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
