@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useMatchesContext } from '../context/MatchesContext';
 import { t } from '../i18n/translations';
 import type { DateGroup, SelectedStadium, SelectedTeam } from '../types';
 import { DateSection } from './DateSection';
@@ -31,6 +32,7 @@ export function MobileSchedule({
   onStadiumSelect,
 }: MobileScheduleProps) {
   const { language } = useLanguage();
+  const { fetchWinChancesForDates } = useMatchesContext();
   const containerRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
@@ -61,6 +63,11 @@ export function MobileSchedule({
   const [loadingLater, setLoadingLater] = useState(false);
 
   const visibleGroups = dateGroups.slice(startIndex, endIndex + 1);
+
+  useEffect(() => {
+    const keys = dateGroups.slice(startIndex, endIndex + 1).map((group) => group.dateKey);
+    fetchWinChancesForDates(keys);
+  }, [startIndex, endIndex, dateGroups, fetchWinChancesForDates]);
 
   useEffect(() => {
     if (!initialDateKey || dateGroups.length === 0 || initialWindowSetRef.current) return;

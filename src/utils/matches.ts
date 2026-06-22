@@ -1,3 +1,4 @@
+import type { MatchWinChances } from '../api/polymarket';
 import type { ApiGame, ApiStadium, ApiTeam, DateGroup, Language, Match } from '../types';
 import { translateKnockoutLabel, translateTeamName } from '../i18n/translations';
 import { formatUserLocalTime, getDateKey, stadiumLocalToDate } from './dates';
@@ -56,6 +57,7 @@ export function transformGame(
   teamMap: Map<string, ApiTeam>,
   stadiumMap: Map<string, ApiStadium>,
   lang: Language,
+  winChances?: MatchWinChances,
 ): Match {
   const stadium = stadiumMap.get(game.stadium_id);
   const parsedScores = parseGameScores(game);
@@ -94,6 +96,8 @@ export function transformGame(
     live,
     phase,
     timeElapsed: game.time_elapsed ?? '',
+    homeWinChance: winChances?.home,
+    awayWinChance: winChances?.away,
   };
 }
 
