@@ -60,6 +60,10 @@ async function fetchLiveData<T>(filename: string): Promise<T | null> {
   return tryFetchJson<T>(`${LIVE_DATA_BASE}/${filename}?t=${Date.now()}`);
 }
 
+function isInvalidScore(score: string | undefined): boolean {
+  return score == null || score === '' || score === 'null';
+}
+
 function gameFreshness(game: ApiGame): number {
   const elapsed = game.time_elapsed?.toLowerCase() ?? '';
   const finished =
@@ -69,17 +73,27 @@ function gameFreshness(game: ApiGame): number {
     elapsed === 'aet' ||
     /pen/.test(elapsed);
 
-  if (finished) {
-    return 1_000 + (Number(game.home_score) || 0) + (Number(game.away_score) || 0);
+  const homeScore = Number(game.home_score);
+  const awayScore = Number(game.away_score);
+  const hasValidScores =
+    !isInvalidScore(game.home_score) &&
+    !isInvalidScore(game.away_score) &&
+    !Number.isNaN(homeScore) &&
+    !Number.isNaN(awayScore);
+
+  if (finished && hasValidScores) {
+    return 1_000 + homeScore + awayScore;
   }
 
   if (elapsed !== 'notstarted' && elapsed !== 'null' && elapsed !== '') {
     const phaseBonus =
       /pen|shootout/.test(elapsed) ? 80 : /et|extra/.test(elapsed) ? 40 : 0;
-    return 500 + phaseBonus + (Number(game.home_score) || 0) + (Number(game.away_score) || 0);
+    const scoreBonus = hasValidScores ? homeScore + awayScore : 0;
+    return 500 + phaseBonus + scoreBonus;
   }
 
-  return 0;
+  // Prefer scheduled copies with real scores over sources that return "null".
+  return hasValidScores ? 1 : 0;
 }
 
 /** Prefer the copy with the most up-to-date score/status per match id. */
@@ -116,22 +130,36 @@ export async function fetchGames(): Promise<ApiGame[]> {
   return fetchJsonFromSources<ApiGame[]>('football.matches.json');
 }
 
+/** Teams rarely change — prefer static/CDN sources to avoid live API rate limits. */
 export async function fetchTeams(): Promise<ApiTeam[]> {
-  const live = await fetchLive<{ teams: ApiTeam[] }>('/get/teams');
-  if (live?.teams) return live.teams;
+  const bust = `t=${Date.now()}`;
+  const staticTeams = await tryFetchJson<ApiTeam[]>(
+    `${JSDELIVR_CDN}/football.teams.json?${bust}`,
+  );
+  if (staticTeams?.length) return staticTeams;
 
   const synced = await fetchLiveData<{ teams: ApiTeam[] }>('teams.json');
   if (synced?.teams) return synced.teams;
 
+  const live = await fetchLive<{ teams: ApiTeam[] }>('/get/teams');
+  if (live?.teams) return live.teams;
+
   return fetchJsonFromSources<ApiTeam[]>('football.teams.json');
 }
 
+/** Stadiums rarely change — prefer static/CDN sources to avoid live API rate limits. */
 export async function fetchStadiums(): Promise<ApiStadium[]> {
-  const live = await fetchLive<{ stadiums: ApiStadium[] }>('/get/stadiums');
-  if (live?.stadiums) return live.stadiums;
+  const bust = `t=${Date.now()}`;
+  const staticStadiums = await tryFetchJson<ApiStadium[]>(
+    `${JSDELIVR_CDN}/football.stadiums.json?${bust}`,
+  );
+  if (staticStadiums?.length) return staticStadiums;
 
   const synced = await fetchLiveData<{ stadiums: ApiStadium[] }>('stadiums.json');
   if (synced?.stadiums) return synced.stadiums;
+
+  const live = await fetchLive<{ stadiums: ApiStadium[] }>('/get/stadiums');
+  if (live?.stadiums) return live.stadiums;
 
   return fetchJsonFromSources<ApiStadium[]>('football.stadiums.json');
 }
