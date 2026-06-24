@@ -155,7 +155,7 @@ function AppContent() {
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex h-dvh flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <Header onOpenCodeOfConduct={() => setDetailView({ kind: 'codeOfConduct' })} />
       <NavTabs activeTab={activeTab} onTabChange={handleTabChange} />
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
