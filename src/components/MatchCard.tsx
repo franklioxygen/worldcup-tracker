@@ -10,6 +10,7 @@ interface MatchCardProps {
   match: Match;
   onTeamSelect?: (team: SelectedTeam) => void;
   onStadiumSelect?: (stadium: SelectedStadium) => void;
+  showDate?: boolean;
 }
 
 function WinChanceDots() {
@@ -124,12 +125,21 @@ function ScoreBlock({
   );
 }
 
+function formatShortDate(kickoff: Date, language: string): string {
+  if (language === 'zh') {
+    return `${kickoff.getMonth() + 1}月${kickoff.getDate()}日`;
+  }
+  return kickoff.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 function StatusBadge({
   match,
   onTimeClick,
+  showDate,
 }: {
   match: Match;
   onTimeClick?: () => void;
+  showDate?: boolean;
 }) {
   const { language } = useLanguage();
   const [now, setNow] = useState(() => new Date());
@@ -172,6 +182,10 @@ function StatusBadge({
     );
   }
 
+  const timeLabel = showDate
+    ? `${formatShortDate(match.kickoff, language)} · ${match.time}`
+    : match.time;
+
   return (
     <button
       type="button"
@@ -179,12 +193,12 @@ function StatusBadge({
       className="rounded-full bg-wc-green/10 px-2 py-0.5 text-[10px] font-semibold text-wc-green transition-colors hover:bg-wc-green/20"
       aria-label={t(language, 'addToCalendar')}
     >
-      {match.time}
+      {timeLabel}
     </button>
   );
 }
 
-export function MatchCard({ match, onTeamSelect, onStadiumSelect }: MatchCardProps) {
+export function MatchCard({ match, onTeamSelect, onStadiumSelect, showDate }: MatchCardProps) {
   const { language } = useLanguage();
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const showScore = match.finished || match.live;
@@ -209,6 +223,7 @@ export function MatchCard({ match, onTeamSelect, onStadiumSelect }: MatchCardPro
         <StatusBadge
           match={match}
           onTimeClick={canAddToCalendar ? () => setShowCalendarModal(true) : undefined}
+          showDate={showDate}
         />
       </div>
 

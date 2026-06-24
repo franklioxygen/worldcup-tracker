@@ -30,13 +30,13 @@ function resolveTeamName(
   const nameEn = side === 'home' ? game.home_team_name_en : game.away_team_name_en;
   const teamId = side === 'home' ? game.home_team_id : game.away_team_id;
 
-  if (label) {
-    return translateKnockoutLabel(label, lang);
-  }
-
   const resolvedName = nameEn || teamMap.get(teamId)?.name_en;
   if (resolvedName) {
     return translateTeamName(resolvedName, lang);
+  }
+
+  if (label) {
+    return translateKnockoutLabel(label, lang);
   }
 
   return 'TBD';
