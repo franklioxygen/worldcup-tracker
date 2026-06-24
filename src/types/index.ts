@@ -99,6 +99,8 @@ export interface Match {
   awayScore: number;
   homeFlag?: string;
   awayFlag?: string;
+  homeCode?: string;
+  awayCode?: string;
   dateKey: string;
   time: string;
   kickoff: Date;

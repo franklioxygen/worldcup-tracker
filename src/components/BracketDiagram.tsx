@@ -148,7 +148,7 @@ function BracketCard({ match, matchH, onTeamSelect }: BracketCardProps) {
     >
       <TeamRow
         flag={match.homeTeamId ? match.homeFlag : undefined}
-        name={match.homeTeamId ? match.homeTeam : 'TBD'}
+        name={match.homeTeamId ? (match.homeCode ?? match.homeTeam) : 'TBD'}
         score={match.homeScore}
         showScore={showScore}
         bold={!!homeWins}
@@ -158,7 +158,7 @@ function BracketCard({ match, matchH, onTeamSelect }: BracketCardProps) {
       <div className="mx-1.5 border-t border-slate-100 dark:border-slate-700/40" />
       <TeamRow
         flag={match.awayTeamId ? match.awayFlag : undefined}
-        name={match.awayTeamId ? match.awayTeam : 'TBD'}
+        name={match.awayTeamId ? (match.awayCode ?? match.awayTeam) : 'TBD'}
         score={match.awayScore}
         showScore={showScore}
         bold={!!awayWins}
@@ -181,9 +181,9 @@ export function BracketDiagram({ allMatches, onTeamSelect }: BracketDiagramProps
 
   // Responsive sizing
   const unit   = isDesktop ? 60 : 52;
-  const matchH = isDesktop ? 48 : 42;
-  const colW   = isDesktop ? 108 : 86;
-  const colGap = isDesktop ? 24  : 12;
+  const matchH = isDesktop ? 48 : 40;
+  const colW   = isDesktop ? 108 : 68;
+  const colGap = isDesktop ? 24  : 10;
   const headerH = 24;
 
   const tw = totalW(colW, colGap);

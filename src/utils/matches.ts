@@ -77,6 +77,8 @@ export function transformGame(
     awayTeam: resolveTeamName(game, 'away', teamMap, lang),
     homeTeamId,
     awayTeamId,
+    homeCode: homeTeamId ? teamMap.get(homeTeamId)?.fifa_code : undefined,
+    awayCode: awayTeamId ? teamMap.get(awayTeamId)?.fifa_code : undefined,
     homeScore: scores.homeScore,
     awayScore: scores.awayScore,
     homePenScore: scores.homePenScore,
