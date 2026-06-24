@@ -242,7 +242,8 @@ export function BracketDiagram({ allMatches, onTeamSelect }: BracketDiagramProps
         {language === 'en' ? '← swipe to see full bracket →' : '← 左右滑动查看完整对阵图 →'}
       </p>
 
-      <div className={`px-4${isDesktop ? ' mx-auto' : ''}`} style={{ width: tw + 32 }}>
+      <div className="flex min-w-max justify-center">
+      <div className="px-4" style={{ width: tw + 32 }}>
         {/* Round column headers */}
         <div className="flex" style={{ gap: colGap }}>
           {BRACKET_ROUNDS.map((round) => (
@@ -317,6 +318,7 @@ export function BracketDiagram({ allMatches, onTeamSelect }: BracketDiagramProps
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
