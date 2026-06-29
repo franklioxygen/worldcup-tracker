@@ -64,6 +64,29 @@ function isInvalidScore(score: string | undefined): boolean {
   return score == null || score === '' || score === 'null';
 }
 
+/** Scheduled placeholders use 0-0 before kickoff — not real results. */
+function isPlaceholderScore(game: ApiGame): boolean {
+  const elapsed = game.time_elapsed?.toLowerCase() ?? '';
+  const notStarted = elapsed === 'notstarted' || elapsed === 'null' || elapsed === '';
+  const finished = (game.finished ?? '').toUpperCase() === 'TRUE';
+  if (!notStarted || finished) return false;
+
+  const homeScore = Number(game.home_score);
+  const awayScore = Number(game.away_score);
+  return (
+    !isInvalidScore(game.home_score) &&
+    !isInvalidScore(game.away_score) &&
+    !Number.isNaN(homeScore) &&
+    !Number.isNaN(awayScore) &&
+    homeScore === 0 &&
+    awayScore === 0
+  );
+}
+
+function hasTeamId(teamId: string | undefined): boolean {
+  return !!teamId && teamId !== '0';
+}
+
 function gameFreshness(game: ApiGame): number {
   const elapsed = game.time_elapsed?.toLowerCase() ?? '';
   const finished =
@@ -79,7 +102,8 @@ function gameFreshness(game: ApiGame): number {
     !isInvalidScore(game.home_score) &&
     !isInvalidScore(game.away_score) &&
     !Number.isNaN(homeScore) &&
-    !Number.isNaN(awayScore);
+    !Number.isNaN(awayScore) &&
+    !isPlaceholderScore(game);
 
   if (finished && hasValidScores) {
     return 1_000 + homeScore + awayScore;
@@ -96,6 +120,28 @@ function gameFreshness(game: ApiGame): number {
   return hasValidScores ? 1 : 0;
 }
 
+/** Merge score/status from the fresher copy while keeping resolved team ids. */
+function mergeTwoGames(a: ApiGame, b: ApiGame): ApiGame {
+  const [fresher, other] = gameFreshness(a) >= gameFreshness(b) ? [a, b] : [b, a];
+  const merged: ApiGame = { ...fresher };
+
+  for (const side of ['home', 'away'] as const) {
+    const idKey = `${side}_team_id` as const;
+    const nameEnKey = `${side}_team_name_en` as const;
+    const nameFaKey = `${side}_team_name_fa` as const;
+    const labelKey = `${side}_team_label` as const;
+
+    if (!hasTeamId(merged[idKey]) && hasTeamId(other[idKey])) {
+      merged[idKey] = other[idKey];
+      if (!merged[nameEnKey] && other[nameEnKey]) merged[nameEnKey] = other[nameEnKey];
+      if (!merged[nameFaKey] && other[nameFaKey]) merged[nameFaKey] = other[nameFaKey];
+      if (!merged[labelKey] && other[labelKey]) merged[labelKey] = other[labelKey];
+    }
+  }
+
+  return merged;
+}
+
 /** Prefer the copy with the most up-to-date score/status per match id. */
 export function mergeGames(...sources: ApiGame[][]): ApiGame[] {
   const map = new Map<string, ApiGame>();
@@ -103,9 +149,7 @@ export function mergeGames(...sources: ApiGame[][]): ApiGame[] {
   for (const games of sources) {
     for (const game of games) {
       const existing = map.get(game.id);
-      if (!existing || gameFreshness(game) >= gameFreshness(existing)) {
-        map.set(game.id, game);
-      }
+      map.set(game.id, existing ? mergeTwoGames(existing, game) : game);
     }
   }
 
