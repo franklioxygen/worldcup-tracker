@@ -148,7 +148,7 @@ function BracketCard({ match, matchH, onTeamSelect }: BracketCardProps) {
     >
       <TeamRow
         flag={match.homeTeamId ? match.homeFlag : undefined}
-        name={match.homeTeamId ? (match.homeCode ?? match.homeTeam) : 'TBD'}
+        name={match.homeTeamId ? (match.homeCode ?? match.homeTeam) : match.homeTeam}
         score={match.homeScore}
         showScore={showScore}
         bold={!!homeWins}
@@ -158,7 +158,7 @@ function BracketCard({ match, matchH, onTeamSelect }: BracketCardProps) {
       <div className="mx-1.5 border-t border-slate-100 dark:border-slate-700/40" />
       <TeamRow
         flag={match.awayTeamId ? match.awayFlag : undefined}
-        name={match.awayTeamId ? (match.awayCode ?? match.awayTeam) : 'TBD'}
+        name={match.awayTeamId ? (match.awayCode ?? match.awayTeam) : match.awayTeam}
         score={match.awayScore}
         showScore={showScore}
         bold={!!awayWins}
