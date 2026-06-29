@@ -3,6 +3,10 @@ import { useIsDesktop } from '../hooks/useMediaQuery';
 import { useLanguage } from '../context/LanguageContext';
 import { translateMatchType } from '../i18n/translations';
 import type { Match, SelectedTeam } from '../types';
+import {
+  buildBracketRoundMatches,
+  resolveBracketTeamSlot,
+} from '../utils/bracketOrder';
 
 // Round order left → right in the bracket
 const BRACKET_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'final'] as const;
@@ -108,10 +112,11 @@ function TeamRow({ flag, name, score, showScore, bold, teamId, onTeamSelect }: T
 interface BracketCardProps {
   match: Match | null;
   matchH: number;
+  matchById: Map<string, Match>;
   onTeamSelect?: (team: SelectedTeam) => void;
 }
 
-function BracketCard({ match, matchH, onTeamSelect }: BracketCardProps) {
+function BracketCard({ match, matchH, matchById, onTeamSelect }: BracketCardProps) {
   if (!match) {
     return (
       <div
@@ -134,6 +139,8 @@ function BracketCard({ match, matchH, onTeamSelect }: BracketCardProps) {
   const showScore = match.finished || match.live;
   const homeWins = showScore && match.homeScore > match.awayScore;
   const awayWins = showScore && match.awayScore > match.homeScore;
+  const homeSlot = resolveBracketTeamSlot(match, 'home', matchById);
+  const awaySlot = resolveBracketTeamSlot(match, 'away', matchById);
 
   const borderCls = match.live
     ? 'border-red-400/60 dark:border-red-500/50'
@@ -147,22 +154,22 @@ function BracketCard({ match, matchH, onTeamSelect }: BracketCardProps) {
       style={{ height: matchH }}
     >
       <TeamRow
-        flag={match.homeTeamId ? match.homeFlag : undefined}
-        name={match.homeTeamId ? (match.homeCode ?? match.homeTeam) : match.homeTeam}
+        flag={homeSlot.flag}
+        name={homeSlot.code ?? homeSlot.name}
         score={match.homeScore}
         showScore={showScore}
         bold={!!homeWins}
-        teamId={match.homeTeamId}
+        teamId={homeSlot.teamId}
         onTeamSelect={onTeamSelect}
       />
       <div className="mx-1.5 border-t border-slate-100 dark:border-slate-700/40" />
       <TeamRow
-        flag={match.awayTeamId ? match.awayFlag : undefined}
-        name={match.awayTeamId ? (match.awayCode ?? match.awayTeam) : match.awayTeam}
+        flag={awaySlot.flag}
+        name={awaySlot.code ?? awaySlot.name}
         score={match.awayScore}
         showScore={showScore}
         bold={!!awayWins}
-        teamId={match.awayTeamId}
+        teamId={awaySlot.teamId}
         onTeamSelect={onTeamSelect}
       />
     </div>
@@ -189,19 +196,16 @@ export function BracketDiagram({ allMatches, onTeamSelect }: BracketDiagramProps
   const tw = totalW(colW, colGap);
   const totalH = unit * N_SLOTS;
 
-  // Group and sort matches per round
-  const roundMatches = useMemo(() => {
-    const map = new Map<string, Match[]>();
-    for (const round of [...BRACKET_ROUNDS, 'third'] as const) {
-      map.set(
-        round,
-        allMatches
-          .filter((m) => m.type === round)
-          .sort((a, b) => a.kickoff.getTime() - b.kickoff.getTime()),
-      );
-    }
-    return map;
-  }, [allMatches]);
+  const matchById = useMemo(
+    () => new Map(allMatches.map((match) => [match.id, match])),
+    [allMatches],
+  );
+
+  // Group matches per round in official bracket-tree order
+  const roundMatches = useMemo(
+    () => buildBracketRoundMatches(allMatches),
+    [allMatches],
+  );
 
   // SVG connector lines between consecutive rounds
   const connectorLines = useMemo(() => {
@@ -290,7 +294,12 @@ export function BracketDiagram({ allMatches, onTeamSelect }: BracketDiagramProps
                   height: matchH,
                 }}
               >
-                <BracketCard match={match} matchH={matchH} onTeamSelect={onTeamSelect} />
+                <BracketCard
+                  match={match}
+                  matchH={matchH}
+                  matchById={matchById}
+                  onTeamSelect={onTeamSelect}
+                />
               </div>
             )),
           )}
@@ -313,7 +322,12 @@ export function BracketDiagram({ allMatches, onTeamSelect }: BracketDiagramProps
                 {translateMatchType('third', language)}
               </p>
               <div style={{ width: colW, height: matchH }}>
-                <BracketCard match={thirdMatch} matchH={matchH} onTeamSelect={onTeamSelect} />
+                <BracketCard
+                  match={thirdMatch}
+                  matchH={matchH}
+                  matchById={matchById}
+                  onTeamSelect={onTeamSelect}
+                />
               </div>
             </div>
           </div>
