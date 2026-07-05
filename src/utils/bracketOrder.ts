@@ -88,6 +88,10 @@ function winnerSlotFromSide(match: Match, side: 'home' | 'away'): BracketTeamSlo
   };
 }
 
+function bothDirectParticipants(match: Match): boolean {
+  return Boolean(match.homeTeamId && match.awayTeamId);
+}
+
 /** Winner of a completed feeder match, using resolved participants + scores. */
 function resolveFeederMatchWinner(
   matchId: string,
@@ -95,6 +99,21 @@ function resolveFeederMatchWinner(
 ): BracketTeamSlot | null {
   const match = byId.get(matchId);
   if (!match?.finished) return null;
+
+  // API confirmed both teams — trust this match's scores, not upstream R32 feeders.
+  if (bothDirectParticipants(match)) {
+    const home = directTeamSlot(match, 'home');
+    const away = directTeamSlot(match, 'away');
+    if (home && away) {
+      if (match.homeScore > match.awayScore) return home;
+      if (match.awayScore > match.homeScore) return away;
+
+      const winnerSide = getMatchWinnerSide(match);
+      if (winnerSide === 'home') return home;
+      if (winnerSide === 'away') return away;
+    }
+    return null;
+  }
 
   const home = resolveBracketTeamSlot(match, 'home', byId);
   const away = resolveBracketTeamSlot(match, 'away', byId);
@@ -120,6 +139,11 @@ export function resolveBracketTeamSlot(
   side: 'home' | 'away',
   byId: Map<string, Match>,
 ): BracketTeamSlot {
+  const direct = directTeamSlot(match, side);
+
+  // When the API has assigned a real team to this slot, prefer it over upstream feeders.
+  if (direct?.teamId) return direct;
+
   const feeders = KNOCKOUT_FEEDERS[match.id];
   const childFeederId = side === 'home' ? feeders?.[0] : feeders?.[1];
 
@@ -128,16 +152,7 @@ export function resolveBracketTeamSlot(
     if (winner) return winner;
   }
 
-  const direct = directTeamSlot(match, side);
   if (direct) return direct;
-
-  if (childFeederId) {
-    const feederId = parseFeederMatchId(side === 'home' ? match.homeTeam : match.awayTeam);
-    if (feederId) {
-      const winner = resolveFeederMatchWinner(feederId, byId);
-      if (winner) return winner;
-    }
-  }
 
   return { name: 'TBD' };
 }
