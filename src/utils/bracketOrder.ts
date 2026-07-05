@@ -21,6 +21,11 @@ const KNOCKOUT_FEEDERS: Record<string, readonly [string, string]> = {
 
 const BRACKET_ROUNDS = ['r32', 'r16', 'qf', 'sf', 'final'] as const;
 
+/** Official WC2026 feeder pair for a knockout match (home feeder, away feeder). */
+export function getBracketFeeders(matchId: string): readonly [string, string] | undefined {
+  return KNOCKOUT_FEEDERS[matchId];
+}
+
 const WINNER_MATCH_RE = /Winner Match (\d+)/i;
 
 export function parseFeederMatchId(label: string): string | null {

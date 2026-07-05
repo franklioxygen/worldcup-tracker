@@ -5,6 +5,7 @@ import { translateMatchType } from '../i18n/translations';
 import type { Match, SelectedTeam } from '../types';
 import {
   buildBracketRoundMatches,
+  getBracketFeeders,
   resolveBracketTeamSlot,
 } from '../utils/bracketOrder';
 
@@ -207,28 +208,37 @@ export function BracketDiagram({ allMatches, onTeamSelect }: BracketDiagramProps
     [allMatches],
   );
 
-  // SVG connector lines between consecutive rounds
+  // SVG connector lines follow official feeder pairs (not adjacent visual rows).
   const connectorLines = useMemo(() => {
     const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
 
     for (let ri = 0; ri < BRACKET_ROUNDS.length - 1; ri++) {
-      const matches = roundMatches.get(BRACKET_ROUNDS[ri]) ?? [];
-      const pairCount = Math.floor(matches.length / 2);
+      const currentMatches = roundMatches.get(BRACKET_ROUNDS[ri]) ?? [];
+      const nextMatches = roundMatches.get(BRACKET_ROUNDS[ri + 1]) ?? [];
+      const currentIndexById = new Map(currentMatches.map((match, index) => [match.id, index]));
 
       const rightEdge = colX(ri, colW, colGap) + colW;
       const midX = rightEdge + colGap * 0.45;
       const nextLeft = colX(ri + 1, colW, colGap);
 
-      for (let pi = 0; pi < pairCount; pi++) {
-        const yA   = matchCenterY(pi * 2,     ri,     unit);
-        const yB   = matchCenterY(pi * 2 + 1, ri,     unit);
-        const yNext = matchCenterY(pi,          ri + 1, unit);
+      for (let ni = 0; ni < nextMatches.length; ni++) {
+        const nextMatch = nextMatches[ni];
+        const feeders = getBracketFeeders(nextMatch.id);
+        if (!feeders) continue;
+
+        const idxA = currentIndexById.get(feeders[0]);
+        const idxB = currentIndexById.get(feeders[1]);
+        if (idxA === undefined || idxB === undefined) continue;
+
+        const yA = matchCenterY(idxA, ri, unit);
+        const yB = matchCenterY(idxB, ri, unit);
+        const yNext = matchCenterY(ni, ri + 1, unit);
 
         lines.push(
-          { x1: rightEdge, y1: yA,    x2: midX,     y2: yA    }, // from match A
-          { x1: rightEdge, y1: yB,    x2: midX,     y2: yB    }, // from match B
-          { x1: midX,      y1: yA,    x2: midX,     y2: yB    }, // vertical join
-          { x1: midX,      y1: yNext, x2: nextLeft, y2: yNext }, // to next round
+          { x1: rightEdge, y1: yA, x2: midX, y2: yA },
+          { x1: rightEdge, y1: yB, x2: midX, y2: yB },
+          { x1: midX, y1: yA, x2: midX, y2: yB },
+          { x1: midX, y1: yNext, x2: nextLeft, y2: yNext },
         );
       }
     }
