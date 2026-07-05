@@ -162,50 +162,53 @@ export function resolveBracketTeamSlot(
   return { name: 'TBD' };
 }
 
-function orderRoundFromFeeders(roundIds: string[], byId: Map<string, Match>): Match[] {
-  const ordered: Match[] = [];
+const FINAL_MATCH_ID = '104';
+const ROUND_BY_DEPTH = ['final', 'sf', 'qf', 'r16', 'r32'] as const;
 
-  for (const matchId of roundIds) {
-    const feeders = KNOCKOUT_FEEDERS[matchId];
-    if (!feeders) continue;
+/**
+ * In-order traversal of the feeder tree from the final.
+ * A parent match is visited between its two feeders, so each round's list comes
+ * out top-to-bottom with feeders physically adjacent — no crossing branches.
+ */
+function collectBracketOrder(
+  matchId: string,
+  depth: number,
+  byId: Map<string, Match>,
+  out: Record<string, Match[]>,
+): void {
+  const feeders = KNOCKOUT_FEEDERS[matchId];
 
-    const match = byId.get(matchId);
-    if (match) ordered.push(match);
-  }
+  if (feeders) collectBracketOrder(feeders[0], depth + 1, byId, out);
 
-  return ordered;
-}
+  const round = ROUND_BY_DEPTH[depth];
+  const match = byId.get(matchId);
+  if (round && match) out[round].push(match);
 
-function buildR32Order(byId: Map<string, Match>): Match[] {
-  const ordered: Match[] = [];
-
-  for (const r16Id of ['89', '90', '91', '92', '93', '94', '95', '96']) {
-    const feeders = KNOCKOUT_FEEDERS[r16Id];
-    if (!feeders) continue;
-
-    for (const feederId of feeders) {
-      const match = byId.get(feederId);
-      if (match) ordered.push(match);
-    }
-  }
-
-  return ordered;
+  if (feeders) collectBracketOrder(feeders[1], depth + 1, byId, out);
 }
 
 /** Order knockout matches for the visual bracket tree (not kickoff time). */
 export function buildBracketRoundMatches(allMatches: Match[]): Map<string, Match[]> {
   const byId = new Map(allMatches.map((match) => [match.id, match]));
-  const map = new Map<string, Match[]>();
+  const ordered: Record<string, Match[]> = {
+    r32: [],
+    r16: [],
+    qf: [],
+    sf: [],
+    final: [],
+  };
 
-  map.set('r32', buildR32Order(byId));
-  map.set('r16', orderRoundFromFeeders(['89', '90', '91', '92', '93', '94', '95', '96'], byId));
-  map.set('qf', orderRoundFromFeeders(['97', '98', '99', '100'], byId));
-  map.set('sf', orderRoundFromFeeders(['101', '102'], byId));
-  map.set('final', orderRoundFromFeeders(['104'], byId));
+  collectBracketOrder(FINAL_MATCH_ID, 0, byId, ordered);
+
+  const map = new Map<string, Match[]>();
+  for (const round of BRACKET_ROUNDS) {
+    map.set(round, ordered[round]);
+  }
 
   const third = byId.get('103');
   if (third) map.set('third', [third]);
 
+  // Fallback to type + id order if the feeder tree yielded nothing for a round.
   for (const round of BRACKET_ROUNDS) {
     if ((map.get(round)?.length ?? 0) === 0) {
       map.set(
