@@ -52,44 +52,11 @@ export interface BracketTeamSlot {
   teamId?: string;
 }
 
-function winnerSlotFromFeeder(feeder: Match, side: 'home' | 'away'): BracketTeamSlot {
-  return {
-    name: (side === 'home' ? feeder.homeCode : feeder.awayCode) ??
-      (side === 'home' ? feeder.homeTeam : feeder.awayTeam),
-    code: side === 'home' ? feeder.homeCode : feeder.awayCode,
-    flag: side === 'home' ? feeder.homeFlag : feeder.awayFlag,
-    teamId: side === 'home' ? feeder.homeTeamId : feeder.awayTeamId,
-  };
+function isTbdSlot(slot: BracketTeamSlot): boolean {
+  return !slot.teamId && slot.name === 'TBD';
 }
 
-function resolveWinnerFromFeeder(
-  feederId: string,
-  byId: Map<string, Match>,
-): BracketTeamSlot | null {
-  const feeder = byId.get(feederId);
-  if (!feeder) return null;
-
-  const winner = getMatchWinnerSide(feeder);
-  if (winner) return winnerSlotFromFeeder(feeder, winner);
-  return null;
-}
-
-/** Resolve a knockout slot from API data or a completed feeder match. */
-export function resolveBracketTeamSlot(
-  match: Match,
-  side: 'home' | 'away',
-  byId: Map<string, Match>,
-): BracketTeamSlot {
-  const feeders = KNOCKOUT_FEEDERS[match.id];
-  const feederIdFromTree = side === 'home' ? feeders?.[0] : feeders?.[1];
-
-  // Official bracket tree: slot comes from a feeder match, not a direct API team id.
-  if (feederIdFromTree) {
-    const fromFeeder = resolveWinnerFromFeeder(feederIdFromTree, byId);
-    if (fromFeeder) return fromFeeder;
-    return { name: 'TBD' };
-  }
-
+function directTeamSlot(match: Match, side: 'home' | 'away'): BracketTeamSlot | null {
   const teamId = side === 'home' ? match.homeTeamId : match.awayTeamId;
   const teamName = side === 'home' ? match.homeTeam : match.awayTeam;
   const teamCode = side === 'home' ? match.homeCode : match.awayCode;
@@ -101,12 +68,78 @@ export function resolveBracketTeamSlot(
 
   const feederId = parseFeederMatchId(teamName);
   if (feederId) {
-    const fromFeeder = resolveWinnerFromFeeder(feederId, byId);
-    if (fromFeeder) return fromFeeder;
-    return { name: 'TBD' };
+    return null;
   }
 
-  return { name: teamName || 'TBD' };
+  if (teamName && teamName !== 'TBD') {
+    return { name: teamName, code: teamCode, flag };
+  }
+
+  return null;
+}
+
+function winnerSlotFromSide(match: Match, side: 'home' | 'away'): BracketTeamSlot {
+  return directTeamSlot(match, side) ?? {
+    name: (side === 'home' ? match.homeCode : match.awayCode) ??
+      (side === 'home' ? match.homeTeam : match.awayTeam),
+    code: side === 'home' ? match.homeCode : match.awayCode,
+    flag: side === 'home' ? match.homeFlag : match.awayFlag,
+    teamId: side === 'home' ? match.homeTeamId : match.awayTeamId,
+  };
+}
+
+/** Winner of a completed feeder match, using resolved participants + scores. */
+function resolveFeederMatchWinner(
+  matchId: string,
+  byId: Map<string, Match>,
+): BracketTeamSlot | null {
+  const match = byId.get(matchId);
+  if (!match?.finished) return null;
+
+  const home = resolveBracketTeamSlot(match, 'home', byId);
+  const away = resolveBracketTeamSlot(match, 'away', byId);
+
+  if (!isTbdSlot(home) && !isTbdSlot(away)) {
+    if (match.homeScore > match.awayScore) return home;
+    if (match.awayScore > match.homeScore) return away;
+
+    const winnerSide = getMatchWinnerSide(match);
+    if (winnerSide === 'home') return home;
+    if (winnerSide === 'away') return away;
+    return null;
+  }
+
+  const winnerSide = getMatchWinnerSide(match);
+  if (!winnerSide) return null;
+  return winnerSlotFromSide(match, winnerSide);
+}
+
+/** Resolve a knockout slot from the feeder tree or direct API assignment. */
+export function resolveBracketTeamSlot(
+  match: Match,
+  side: 'home' | 'away',
+  byId: Map<string, Match>,
+): BracketTeamSlot {
+  const feeders = KNOCKOUT_FEEDERS[match.id];
+  const childFeederId = side === 'home' ? feeders?.[0] : feeders?.[1];
+
+  if (childFeederId) {
+    const winner = resolveFeederMatchWinner(childFeederId, byId);
+    if (winner) return winner;
+  }
+
+  const direct = directTeamSlot(match, side);
+  if (direct) return direct;
+
+  if (childFeederId) {
+    const feederId = parseFeederMatchId(side === 'home' ? match.homeTeam : match.awayTeam);
+    if (feederId) {
+      const winner = resolveFeederMatchWinner(feederId, byId);
+      if (winner) return winner;
+    }
+  }
+
+  return { name: 'TBD' };
 }
 
 function orderRoundFromFeeders(roundIds: string[], byId: Map<string, Match>): Match[] {
